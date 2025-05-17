@@ -1,6 +1,49 @@
 @echo off
+setlocal enabledelayedexpansion
 set PYTHONUTF8=1
-echo Cleaning old build files...
+
+:: === Step 1: Get version from get_version.py ===
+FOR /F "delims=" %%F IN ('python get_version.py') DO (
+    SET "PROJECT_VERSION=%%F"
+)
+if /I "%PROJECT_VERSION%"=="VERSION_NOT_FOUND" (
+    echo [ERROR] Failed to extract version.
+    exit /b 1
+)
+echo [INFO] Project version detected: v%PROJECT_VERSION%
+
+:: === Step 2: Git commit & push to master ===
+echo [INFO] Committing changes to Git...
+git add .
+git commit -m "Auto build and release: v%PROJECT_VERSION%"
+git push origin HEAD:master
+if %errorlevel% neq 0 (
+    echo [ERROR] Git push to master failed!
+    exit /b %errorlevel%
+)
+echo.
+
+:: === Step 3: Create version branch (vX.Y.Z) ===
+echo [INFO] Creating version branch v%PROJECT_VERSION%...
+git branch v%PROJECT_VERSION% 2>nul
+git checkout v%PROJECT_VERSION%
+git push origin v%PROJECT_VERSION%
+if %errorlevel% neq 0 (
+    echo [WARNING] Failed to push version branch. It may already exist.
+)
+git checkout master
+echo.
+
+:: === Step 4: Check if version exists on PyPI ===
+echo [INFO] Checking PyPI for existing version...
+python -c "import requests, sys; resp = requests.get(f'https://pypi.org/pypi/logixbase/json'); versions = resp.json().get('releases', {}); sys.exit(0 if '%PROJECT_VERSION%' not in versions else 1)"
+if %errorlevel% equ 1 (
+    echo [INFO] Version v%PROJECT_VERSION% already exists on PyPI. Skipping build and upload.
+    goto :end
+)
+
+:: === Step 5: Clean previous builds ===
+echo [INFO] Cleaning old build files...
 if exist dist rmdir /s /q dist
 if exist build rmdir /s /q build
 for /d %%i in (*.egg-info) do (
@@ -8,61 +51,24 @@ for /d %%i in (*.egg-info) do (
 )
 echo.
 
-echo Building the project...
+:: === Step 6: Build project ===
+echo [INFO] Building the project...
 python setup.py sdist bdist_wheel
 if %errorlevel% neq 0 (
-    echo Build failed!
+    echo [ERROR] Build failed!
     exit /b %errorlevel%
 )
 echo.
 
-echo Uploading to PyPI...
+:: === Step 7: Upload to PyPI ===
+echo [INFO] Uploading to PyPI...
 twine upload dist/*
 if %errorlevel% neq 0 (
-    echo PyPI upload failed!
+    echo [ERROR] PyPI upload failed!
     exit /b %errorlevel%
 )
 echo.
 
-echo Pushing to GitHub...
-git add .
-git commit -m "Auto build and publish"
-
-echo Pushing to main branch...
-git push git@github.com:seanliiiiii/logixbase.git HEAD:main
-if %errorlevel% neq 0 (
-    echo GitHub push to main branch failed!
-    exit /b %errorlevel%
-)
-echo.
-
-echo Getting project version...
-FOR /F "tokens=* USEBACKQ" %%F IN (`python -c "import re; f=open('logixbase/__init__.py', 'r', encoding='utf-8'); print(re.search(r\"__version__\s*=\s*['\"]([^'\"]*)['\"]\", f.read()).group(1)); f.close()"`) DO (
-    SET "PROJECT_VERSION=%%F"
-)
-
-if not defined PROJECT_VERSION (
-    echo Failed to get project version.
-    exit /b 1
-)
-echo Project version: %PROJECT_VERSION%
-echo.
-
-echo Creating and pushing version branch v%PROJECT_VERSION%...
-git checkout -b v%PROJECT_VERSION%
-if %errorlevel% neq 0 (
-    echo Failed to create version branch v%PROJECT_VERSION%!
-    echo It might already exist. Attempting to push existing local branch.
-)
-git push git@github.com:seanliiiiii/logixbase.git v%PROJECT_VERSION%
-if %errorlevel% neq 0 (
-    echo GitHub push to version branch v%PROJECT_VERSION% failed!
-    exit /b %errorlevel%
-)
-echo.
-
-echo Switching back to main branch...
-git checkout main
-echo.
-
-echo Successfully built, published to PyPI, and pushed to GitHub (main and version branch v%PROJECT_VERSION%). 
+:end
+echo [SUCCESS] Completed: Git pushed to master and version branch, and uploaded to PyPI (if new).
+endlocal
