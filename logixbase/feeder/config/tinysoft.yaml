@@ -1,0 +1,260 @@
+table:
+  future: 上市期货;退市期货
+  stock: A股;终止上市;暂停上市
+  etf_info: ETF
+  etf_quote: 上证ETF;深证ETF
+  index: 上市指数;退市指数
+  option: 上海期权;深圳期权;期货期权;退市期权
+  alive:
+    future: 上市期货
+    stock: A股;暂停上市
+    etf_info: ETF
+    etf_quote: 上证ETF;深证ETF
+    index: 上市指数
+    option: 上海期权;深圳期权;期货期权
+
+column:
+  StockID: Ticker
+  StockName: Code
+  名称: Code
+  代码: Ticker
+  交易代码(末值): Contract
+  变动日(初值): ListDate
+  最后交易日(末值): DelistDate
+  最后交割日(末值): DeliverDate
+  合约乘数(末值): Multiplier
+  最小变动价位(末值): TickSize
+  最低交易保证金(%%)(末值): MinMargin
+  涨跌停板幅度(%%)(末值): PriceLimit
+  报价单位(末值): QuoteUnit
+  合约乘数单位(末值): MultiplierUnit
+  期货类别(末值): FutureClass
+  商品期货类别(末值): ComFutureClass
+  上市地(末值): Exchange
+  截止日: ExecDate
+  投机买保证金率(%): LongMargin
+  投机卖保证金率(%): ShortMargin
+  套保买保证金率(%): LongMargin_Arbitrage
+  套保卖保证金率(%): ShortMargin_Arbitrage
+  开仓手续费(交易额万分之): OpenCommission_Pct
+  开仓手续费(元/手): OpenCommission_Fix
+  平仓手续费(交易额万分之): CloseCommission_Pct
+  平仓手续费(元/手): CloseCommission_Fix
+  短线开仓手续费(交易额万分之): IntradayOpenCommission_Pct
+  短线开仓手续费(元/手): IntradayOpenCommission_Fix
+  短线平仓手续费(交易额万分之): IntradayCloseCommission_Pct
+  短线平仓手续费(元/手): IntradayCloseCommission_Fix
+  全价: TtlPrice
+  转换因子: TFactor
+  发票价格: TradePrice
+  标的代码: BondCode
+  期现价差: FS_Spread
+  基差: Basis
+  净基差: NetBasis
+  票面利率: BookInterest
+  修正久期: AdjDuration
+  注册资本: RegisteredCapital
+  法定代表人: Representative
+  成立日期: EstablishDate
+  板块: Board
+  总股本: TotalShares
+  流通A股: TotalTradeableShares
+  主营业务: MainBusiness
+  当前状态: Status
+  申万一级行业代码: ShenwanIndustryLevel1
+  申万二级行业代码: ShenwanIndustryLevel2
+  申万三级行业代码: ShenwanIndustryLevel3
+  投资风格: Style
+  投资目标: Target
+  募集总份额: TotalIssuedShares
+  标的指数代码: BenchMark
+  一级市场代码: TradeSymbol
+  指数起始点: BeginPoint
+  样本个数: SampleSize
+  指数类型: IndexClassL1
+  指数类型2: IndexClassL2
+  指数类型3: IndexClassL3
+  合约交易代码: Contract
+  合约简称: Name
+  标的证券代码: Underlying
+  标的证券名称: UnderlyingName
+  标的证券类型: UnderlyingClass
+  行权方式: ExerciseType
+  期权类型: CallorPut
+  合约单位: Multiplier
+  行权价: Strike
+  首个交易日: ListDate
+  最后交易日: DelistDate
+  行权交割日: DeliverDate
+  到期日: ExpiryDate
+  最小报价单位: TickSize
+  上市地: Exchange
+  行权日: ExerciseDate
+  合约未平仓数: OpenInterest
+  合约前收盘价: ContractPreClose
+  合约前结算价: ContractPreSettle
+  标的证券前收盘: UnderlyingPreClose
+  是否有涨跌幅限制: PriceLimit
+  涨幅上限价格: UpperLimit
+  跌幅下限价格: LowerLimit
+  单位保证金: UnitMargin
+  保证金计算比例参数一: MarginCoef1
+  保证金计算比例参数二: MarginCoef2
+  整手数: Lot
+  单笔限价申报下限: LimitOrderMin
+  单笔限价申报上限: LimitOrderMax
+  单笔市价申报下限: MarketOrderMin
+  单笔市价申报上限: MarketOrderMax
+  单笔报价申报下限: OrderMin
+  单笔报价申报上限: OrderMax
+  期权合约状态信息: StatusInfo
+  开仓状态: OpenStatus
+  是否连续停牌: ContinuousSuspension
+  是否距离到期日不足5个交易日: Expirein5TradeDays
+  最近5个交易日内合约是否发生过调整: AdjustedinLast5TradeDays
+  是否新挂牌合约: New
+  指数所属公司(末值): Exchange
+
+decode:
+  Contract: utf8
+  Date: utf8
+  TradeDay: utf8
+  DateTime: utf8
+  Code: gbk
+  Ticker: utf8
+  BondCode: utf8
+  QuoteUnit: gbk
+  MultiplierUnit: gbk
+  FutureClass: gbk
+  ComFutureClass: gbk
+  Representative: gbk
+  Exchange: gbk
+  MainBusiness: gbk
+  Status: gbk
+  ShenwanIndustryLevel3: utf8
+  Board: gbk
+  ShenwanIndustryLevel2: utf8
+  ShenwanIndustryLevel1: utf8
+  TradeSymbol: utf8
+  Style: gbk
+  BenchMark: utf8
+  Target: gbk
+  IndexClassL1: gbk
+  IndexClassL3: utf8
+  IndexClassL2: gbk
+
+status:
+  上市: Listed
+  退市: Delisted
+  暂停上市: Postponed
+  退市整理期: Delisting
+
+exchange:
+  大连商品交易所: DCE
+  郑州商品交易所: CZCE
+  上海期货交易所: SHFE
+  广州期货交易所: GFEX
+  上海国际能源交易中心: INE
+  中国金融期货交易所: CFFEX
+  CFFE: CFFEX
+  CFE: CFFEX
+  SHF: SHFE
+  CZC: CZCE
+  GFE: GFEX
+  北京证券交易所: NE
+  上海证券交易所: SH
+  深圳证券交易所: SZ
+  深圳证券信息有限公司: SZ
+  深圳证券信息有限公司与中央电视台财经频道: SZ
+  中证指数有限公司: CSI
+  申银万国证券研究所: SW
+
+stock:
+  board:
+    主板: Main-Board
+    创业板: GEM
+    科创版: STAR
+
+future:
+  class:
+    商品期货: Commodity
+    股指期货: EquityIndex
+    国债期货: Treasury
+    农产品期货: Agriculture
+    能源化工期货: Chemical
+    非农产品期货: non-Agriculture
+    金属期货: non-Ferrous
+    黑色金属期货: Ferrous
+
+etf:
+  class:
+    style:
+      股票型: Stock
+      QDII: QDII
+      债券型: FixedIncome
+      货币型: Currency
+      沪深港: SHSZHK
+      商品型: Commodity
+    manage:
+      指数基金: Passive
+      主动基金: Active
+
+index:
+  class:
+    level1:
+      股票指数: Stock
+      其他指数: Other
+      债券指数: FixedIncome
+      基金指数: Fund
+      期货指数: Furtures
+    level2:
+      综合指数: Composite
+      行业指数: Industry
+      规模指数: Scale
+    level3:
+      一级行业指数: Level1
+      二级行业指数: Level2
+
+option:
+  class:
+    ETF: ETF
+    指数: Index
+    期货: Future
+  exercise_type:
+    欧式: European
+    美式: American
+  direction_type:
+    认购: C
+    认沽: P
+  underlying_listdate:
+    SH510050: 20150209
+    SH510300: 20191223
+    SZ159919: 20191223
+    SH000300: 20191223
+    SH000852: 20220722
+    CF: 20190128
+    MA: 20191216
+    RM: 20200116
+    SR: 20170419
+    TA: 20191216
+    ZC: 20200630
+    al: 20200810
+    au: 20191220
+    c: 20190128
+    cu: 20180921
+    i: 20191209
+    l: 20200706
+    m: 20170331
+    p: 20210618
+    pg: 20200331
+    pp: 20200706
+    ru: 20190128
+    sc: 20210621
+    v: 20200706
+    zn: 20200810
+    y: 20220808
+    a: 20220808
+    b: 20220808
+    PK: 20220826
+    OI: 20220826
+  underlying_update_day: [20220901]

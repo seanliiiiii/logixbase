@@ -1,0 +1,5 @@
+mail:
+  host: smtp.dev.com
+  username: dev_user@site.com
+  password: devpass
+  mailname: dev@site.com

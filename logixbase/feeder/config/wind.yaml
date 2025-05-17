@@ -1,0 +1,15 @@
+table:
+  Commodity: CCommodityFuturesPositions
+  Equity: CIndexFuturesPositions
+  Treasury: CBondFuturesPositions
+
+exchange:
+  map:
+    CFFEX: CFE
+    CFFE: CFE
+    SHFE: SHF
+    CZCE: CZC
+    GFEX: GFE
+  class:
+    commodity: ["SHFE", "CZCE", "DCE", "INE"]
+    finance: ["CFFEX"]

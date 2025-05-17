@@ -1,0 +1,12 @@
+mail:
+  default: false
+  host: smtp.base.com
+  username: base_user@site.com
+  password: base123
+  mailname: base_user@site.com
+
+
+database:
+  host: 127.0.0.1
+  username: dev_user
+  password: 123456

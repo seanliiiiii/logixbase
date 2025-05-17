@@ -1,0 +1,18 @@
+logger:
+  log_path: "./logs"
+  log_level: "INFO"
+  log_format: "TEXT"
+  to_console: true
+  use_multiprocess: false
+
+plugin:
+  log_monitor:
+    enabled: true
+    log_dir: "./logs"
+  
+  progress:
+    enabled: true
+    update_interval: 1
+
+component:
+  enabled: true 
