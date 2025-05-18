@@ -1,11 +1,13 @@
-import os
+import uuid
 import sys
 import signal
 import traceback
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Dict, Any, Union
 from pathlib import Path
 
+from .constant import Status
+from .schema import EngineConfig
 from ..protocol.mod import OperationProtocol
 from ..configer import ConfigLoader, BaseConfig, read_config
 from ..logger.core import LogManager
@@ -15,19 +17,30 @@ from ..plugin.base import BasePlugin
 
 
 class BaseEngine(ABC):
-    def __init__(self, config_path=None):
-        self.config_path = config_path or self._default_config_path()
-        self.config = self.load_config()
-        self.logger = self.setup_logger()
-        self.executor = self.setup_executor()
+    """
+    主引擎基类
+    """
+    def __init__(self, config_path: Union[str, Path], mode: str = "dev"):
+        self.config_path = config_path
+        self.mode: str = mode
+
+        self.config: Union[None, EngineConfig] = None
+        self.configer: Union[ConfigLoader, None] = None
+        self.logger: Union[LogManager, None] = None
+        self.executor: Union[MultiTaskExecutor, None] = None
+
         self.plugin_manager = PluginManager(self)  # 使用PluginManager替代plugins列表
         self.components = {}  # 组件字典
-        self.status = "INIT"  # 引擎状态
+
+        self.status = Status.INIT  # 引擎状态
         self._register_signal_handlers()
         self._initialized = False
 
     def on_init(self):
         """初始化：配置解析、任务注册、资源准备"""
+        self.setup_configer()
+        self.setup_logger()
+        self.setup_executor()
         # 初始化所有插件
         self.plugin_manager.init_all()
 
@@ -56,7 +69,7 @@ class BaseEngine(ABC):
         """退出处理：资源释放、日志关闭等"""
         # 退出所有插件
         self.plugin_manager.exit_all()
-        self.status = "EXITED"
+        self.status = Status.EXITED
 
     def on_exception(self, exc):
         """异常处理：可扩展到报警等"""
@@ -66,81 +79,24 @@ class BaseEngine(ABC):
                 plugin.on_exception(exc)
             except Exception as e:
                 self.logger.ERROR(f"插件 '{plugin_id}' 异常处理器中出错: {e}")
-        self.status = "ERROR"
+        self.status = Status.ERROR
 
-
-    def _default_config_path(self):
-        return os.getenv("LOGIX_CONFIG", "config.yaml")
-
-    def load_config(self):
-        """加载配置"""
-        self.logger = None  # 防止 configer 输出日志前 logger 尚未初始化
-        
-        try:
-            # 使用ConfigLoader读取配置
-            config_loader = ConfigLoader()
-            
-            # 如果配置文件存在，尝试加载配置
-            if os.path.exists(self.config_path):
-                file_config = read_config(self.config_path)
-                
-                # 合并到默认配置
-                default_config = {
-                    "logger": {
-                        "log_path": "./logs",
-                        "log_level": "INFO",
-                        "log_format": "TEXT",
-                        "to_console": True
-                    }
-                }
-                
-                # 合并配置
-                config = config_loader.merge_config(default_config, file_config)
-                return config
-            else:
-                # 直接使用字典作为默认配置
-                return {
-                    "logger": {
-                        "log_path": "./logs",
-                        "log_level": "INFO",
-                        "log_format": "TEXT",
-                        "to_console": True
-                    }
-                }
-        except Exception as e:
-            print(f"警告: 加载配置文件时出错: {e}")
-            # 直接使用字典作为默认配置
-            return {
-                "logger": {
-                    "log_path": "./logs",
-                    "log_level": "INFO",
-                    "log_format": "TEXT",
-                    "to_console": True
-                }
-            }
+    def setup_configer(self):
+        """初始化配置管理器"""
+        self.configer = ConfigLoader(self.config_path, EngineConfig, self.mode)
+        self.config = self.configer.load()
 
     def setup_logger(self):
         """初始化日志管理器"""
-        # 从配置中获取日志相关设置
-        log_config = self.config.get("logger", {})
-        
-        # 获取日志路径
-        log_path = log_config.get("log_path", "./logs")
-        
-        # 获取是否输出到控制台
-        to_console = log_config.get("to_console", True)
-        
         # 创建单例日志管理器
-        log_manager = LogManager.get_instance(log_path=log_path, to_console=to_console)
-        
-        # 确保日志管理器已启动
-        if not log_manager.status():
-            log_manager.start()
-            
-        return log_manager
+        self.logger = LogManager.get_instance(self.config.logger)
+        # 非多进程模式，直接启动日志管理器，否则需等待业务流程已启动多进程后再手动启动
+        if not self.config.logger.multiprocess:
+            self.logger.start()
 
     def setup_executor(self):
-        return MultiTaskExecutor()
+        mode = self.config.executor.mode
+        self.executor = MultiTaskExecutor(mode, **self.config.executor.__dict__)
 
     def _register_signal_handlers(self):
         signal.signal(signal.SIGINT, self._handle_exit)
@@ -200,7 +156,7 @@ class BaseEngine(ABC):
                     return self.components[component_id].get_status()
                 except Exception as e:
                     self.logger.ERROR(f"获取组件 {component_id} 状态时出错: {e}")
-                    return {"status": "ERROR", "error": str(e)}
+                    return {"status": Status.ERROR, "error": str(e)}
             return None
         return {k: v.get_status() for k, v in self.components.items()}
 
@@ -222,22 +178,22 @@ class BaseEngine(ABC):
     def run(self, mode="cli"):
         try:
             self.logger.INFO("引擎初始化中...")
-            self.status = "INITIALIZING"
+            self.status = Status.INITIALIZING
             self.on_init()
             self._initialized = True
 
             self.logger.INFO("引擎启动中...")
-            self.status = "RUNNING"
+            self.status = Status.RUNNING
             self.on_start()
 
             self.logger.INFO("引擎执行完毕。")
-            self.status = "STOPPED"
+            self.status = Status.STOPPED
             self.on_stop()
 
         except Exception as e:
             self.logger.ERROR("引擎运行期间发生未处理的异常")
             self.logger.ERROR(traceback.format_exc())
-            self.status = "ERROR"
+            self.status = Status.ERROR
             self.on_exception(e)
         finally:
             self.on_exit()
@@ -248,7 +204,7 @@ class BaseComponent(OperationProtocol):
     组件基类，实现OperationProtocol协议
     用于具体业务功能的封装和管理
     """
-    def __init__(self, component_id: str, name: str = None, **kwargs):
+    def __init__(self, name: str = None, **kwargs):
         """
         初始化组件
         
@@ -257,14 +213,20 @@ class BaseComponent(OperationProtocol):
             name: 组件名称，默认为类名
             **kwargs: 额外的参数
         """
-        self.component_id = component_id
-        self.name = name or self.__class__.__name__
-        self.status = "INIT"
+        self._uuid: str = str(uuid.uuid4())
+        self._name = name or self.__class__.__name__
+        self.status = Status.INIT
         self.metadata = kwargs
         self.engine = None
         self.logger = None
         self._thread = None
-        
+
+    def get_name(self) -> str:
+        return self._name
+
+    def get_id(self) -> str:
+        return f"{self._name}:{self._uuid}"
+
     def bind(self, engine):
         """
         将组件绑定到引擎
@@ -279,44 +241,44 @@ class BaseComponent(OperationProtocol):
         """
         启动组件
         """
-        if self.status not in ["INIT", "STOPPED"]:
+        if self.status not in [Status.INIT, Status.STOPPED]:
             if self.logger:
-                self.logger.WARNING(f"Component {self.component_id} already running or in error state: {self.status}")
+                self.logger.WARNING(f"组件{self._name}已启动或已报错: {self.status}")
             return False
             
         try:
-            self.status = "STARTING"
+            self.status = Status.INITIALIZING
             self._execute()
-            self.status = "RUNNING"
+            self.status = Status.RUNNING
             if self.logger:
-                self.logger.INFO(f"Component {self.component_id} started")
+                self.logger.INFO(f"组件{self._name}已启动")
             return True
         except Exception as e:
-            self.status = "ERROR"
+            self.status = Status.ERROR
             if self.logger:
-                self.logger.ERROR(f"Error starting component {self.component_id}: {str(e)}")
+                self.logger.ERROR(f"组件{self._name}启动失败: {str(e)}")
             raise
         
     def stop(self):
         """
         停止组件
         """
-        if self.status not in ["RUNNING", "STARTING"]:
+        if self.status not in [Status.RUNNING, Status.INITIALIZING]:
             if self.logger:
-                self.logger.WARNING(f"Component {self.component_id} not running: {self.status}")
+                self.logger.WARNING(f"组件{self._name}已停止: {self.status}")
             return False
             
         try:
-            self.status = "STOPPING"
+            self.status = Status.STOPPING
             self._stop_execution()
-            self.status = "STOPPED"
+            self.status = Status.STOPPED
             if self.logger:
-                self.logger.INFO(f"Component {self.component_id} stopped")
+                self.logger.INFO(f"组件{self._name}成功终止")
             return True
         except Exception as e:
-            self.status = "ERROR"
+            self.status = Status.ERROR
             if self.logger:
-                self.logger.ERROR(f"Error stopping component {self.component_id}: {str(e)}")
+                self.logger.ERROR(f"组件{self._name}终止失败: {str(e)}")
             raise
         
     def join(self, timeout=None):
@@ -343,18 +305,20 @@ class BaseComponent(OperationProtocol):
             包含组件状态信息的字典
         """
         return {
-            "id": self.component_id,
-            "name": self.name,
+            "id": self._uuid,
+            "name": self._name,
             "status": self.status,
             "type": self.__class__.__name__
         }
-        
+
+    @abstractmethod
     def _execute(self):
         """
         执行组件逻辑，由子类实现
         """
         pass
-        
+
+    @abstractmethod
     def _stop_execution(self):
         """
         停止组件逻辑，由子类实现
@@ -362,4 +326,4 @@ class BaseComponent(OperationProtocol):
         pass
         
     def __repr__(self):
-        return f"<{self.__class__.__name__}(id='{self.component_id}', status='{self.status}')>" 
+        return f"<{self.__class__.__name__}(id='{self._uuid}', name='{self._name}', status='{self.status}')>"

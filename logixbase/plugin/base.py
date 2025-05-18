@@ -1,6 +1,7 @@
 from typing import List, Dict, Any
 
 from ..protocol.plugin import PluginProtocol
+from ..engine.constant import Status
 
 
 class BasePlugin(PluginProtocol):
@@ -24,7 +25,7 @@ class BasePlugin(PluginProtocol):
         self.config = {}
         self.enabled = True
         self.metadata = kwargs
-        self.status = "INIT"
+        self.status = Status.INIT
         
     def bind(self, engine):
         """
@@ -86,14 +87,14 @@ class BasePlugin(PluginProtocol):
             return False
             
         try:
-            self.status = "STARTING"
+            self.status = Status.INITIALIZING
             self.on_start()
-            self.status = "RUNNING"
+            self.status = Status.RUNNING
             if self.logger:
                 self.logger.INFO(f"插件 {self.name} 已启动")
             return True
         except Exception as e:
-            self.status = "ERROR"
+            self.status = Status.ERROR
             if self.logger:
                 self.logger.ERROR(f"启动插件 {self.name} 时出错: {str(e)}")
             return False
@@ -103,7 +104,7 @@ class BasePlugin(PluginProtocol):
         停止插件
         符合OperationProtocol接口
         """
-        if not self.enabled or self.status != "RUNNING":
+        if not self.enabled or self.status != Status.RUNNING:
             return
             
         try:
@@ -113,7 +114,7 @@ class BasePlugin(PluginProtocol):
             if self.logger:
                 self.logger.INFO(f"插件 {self.name} 已停止")
         except Exception as e:
-            self.status = "ERROR"
+            self.status = Status.ERROR
             if self.logger:
                 self.logger.ERROR(f"停止插件 {self.name} 时出错: {str(e)}")
     

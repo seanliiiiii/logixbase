@@ -34,8 +34,10 @@ class MultiTaskExecutor(BaseExecutor):
         super().__init__(mode)
 
         if self.mode in ("process", "pool"):
+            kwargs = {k: v for k, v in kwargs.items() if k in ("max_workers", "maxtasksperchild", "batch_size")}
             self.executor = ProcessExecutor(mode, **kwargs)
         elif self.mode == 'thread':
+            kwargs = {k: v for k, v in kwargs.items() if k in ("max_workers",)}
             self.executor = ThreadExecutor(**kwargs)
         else:
             raise ValueError(f"请输入正确的模式: Pool / Process / Thread")

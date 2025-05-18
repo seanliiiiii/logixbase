@@ -5,6 +5,7 @@ import configparser
 from pathlib import Path
 from typing import Type, Union, get_type_hints, Dict, List, Callable
 from importlib.util import spec_from_file_location, module_from_spec
+
 from pydantic import BaseModel
 
 from .schema import BaseConfig
@@ -48,7 +49,6 @@ class ConfigLoader(OPP, LDP, IDP):
     Args:
         schema_cls (Type[BaseModel], optional): 配置模式的类，默认为BaseConfig。Defaults to BaseConfig.
         mode (str, optional): 配置模式，指定对应的level，默认为"dev"。Defaults to "dev".
-        use_proxy (bool, optional): 是否使用代理。Defaults to False. True代表多进程模式下的配置共享，必定开启热更新模式。
     Attributes:
         schema_cls (Type[BaseModel]): 配置模式的类。
         mode (str): 配置模式。
@@ -62,7 +62,7 @@ class ConfigLoader(OPP, LDP, IDP):
         _hot_manager (Union[HotReloader, None]): 热重载管理器。
     """
     def __init__(self, config_path: Union[Path, str], schema_cls: Type[BaseModel] = BaseConfig,
-                 mode: str = "dev", use_proxy: bool = False, logger = None):
+                 mode: str = "dev"):
         self.config_path: Union[str, Path] = Path(config_path)
 
         self.schema_cls = schema_cls
@@ -80,10 +80,6 @@ class ConfigLoader(OPP, LDP, IDP):
         self._proxy_num: mp.Value = None
         self._logger = None
 
-        if use_proxy:
-            self._init_share_variable()
-            self._logger = logger
-
         self.proxy = ConfigProxy(schema_cls)
         self._hot_manager: Union[HotReloader, None] = None
 
@@ -93,7 +89,7 @@ class ConfigLoader(OPP, LDP, IDP):
     def get_name(self):
         return self._name
 
-    def _find_schema_class(self, module_name: str) -> Type[BaseModel]:
+    def _find_schema_class(self, module_name: str) -> Union[Type[BaseModel], None]:
         """
         根据模块名称查找对应的Schema类。
         Args:
@@ -109,7 +105,8 @@ class ConfigLoader(OPP, LDP, IDP):
                 return v
         if module_name.lower() in self._registry_schema:
             return self._registry_schema[module_name.lower()]
-        raise ValueError(f"未在 {self.schema_cls.__name__} 中声明模块，且未注册: {module_name}")
+        print(f"未在 {self.schema_cls.__name__} 中声明模块，且未注册: {module_name}")
+        return None
 
     def set_config_path(self, config_path: Union[Path, str]):
         """
@@ -165,6 +162,8 @@ class ConfigLoader(OPP, LDP, IDP):
         for module, config_dict in module_config_data.items():
             # 查找对应模块的schema类
             schema_class = self._find_schema_class(module)
+            if schema_class is None:
+                continue
             # 生成配置实例
             instance = create_schema(config_dict, schema_class)
             # 将实例添加到schema_data中
@@ -233,6 +232,9 @@ class ConfigLoader(OPP, LDP, IDP):
         键为模式名称的小写形式，值为模式的类对象。
         """
         self._registry_schema[name.lower()] = schema
+
+    def setup_logger(self, logger):
+        self._logger = logger
 
     def start_hot_reload(self):
         if self._share_event is None:

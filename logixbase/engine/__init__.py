@@ -9,5 +9,6 @@ Engine模块，提供基础引擎和组件管理功能
 
 from .base import BaseEngine, BaseComponent
 from .manager import ProcessManager
+from .schema import EngineConfig
 
-__all__ = ['BaseEngine', 'BaseComponent', 'ProcessManager']
+__all__ = ['BaseEngine', 'BaseComponent', 'ProcessManager', 'EngineConfig']

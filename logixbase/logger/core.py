@@ -4,9 +4,10 @@ import multiprocessing as mp
 from pathlib import Path
 from typing import Union
 import uuid
+from typing import get_type_hints
 
-from .config import load_config
-from .constant import LOG_LEVELS
+from .constant import LOG_LEVELS, LogLevel
+from .schema import LoggerConfig
 from .formatter import format_log
 from .writer import LogWriter
 from .mpwriter import MPLogWriter
@@ -20,43 +21,26 @@ class LogManager(OPP, IDP):
     __started = False
 
     @staticmethod
-    def get_instance(use_mp: bool = None, log_path: Union[str, Path] = None, to_console: bool = True):
+    def get_instance(config: Union[LoggerConfig, dict]):
         """
         获取 LogManager 的单例实例。
         如果传入 use_multiprocess 参数，则使用该参数决定日志写入模式，
         否则采用配置文件中的默认设置。
         """
         if LogManager.__instance is None:
-            LogManager.__instance = LogManager(use_mp, log_path, to_console)
+            LogManager.__instance = LogManager(config)
         return LogManager.__instance
 
-    def __init__(self, use_mp: bool = None, log_path: Union[str, Path] = None, to_console: bool = True):
+    def __init__(self, config: Union[LoggerConfig, dict]):
         if LogManager.__instance is not None:
             raise Exception("LogManager 为单例，请使用 get_instance() 获取实例。")
 
         self._name = "日志管理器"
         self._uuid: str = str(uuid.uuid4())
 
-        self.config = load_config()
-        if log_path is None:
-            self.log_path = self.config.get("log_path", "./logs")
-        else:
-            self.log_path = str(log_path)
-            self.config["log_path"] = self.log_path
-        os.makedirs(self.log_path, exist_ok=True)
-
-        self.log_level = self.config.get("log_level", "INFO")
-        self.log_format = self.config.get("log_format", "TEXT")
-
-        if use_mp is None:
-            self.use_mp = self.config.get("use_multiprocess", True)
-        else:
-            self.use_mp = use_mp
-
-        self.config["to_console"] = to_console
-
+        self.config: LoggerConfig = self._overwrite_config(config)
         # 在主进程中初始化 MPLogWriter，子进程中不初始化写入器
-        if self.use_mp:
+        if self.config.multiprocess:
             if mp.current_process().name == "MainProcess":
                 self.log_writer = MPLogWriter(self.config)
                 self.log("INFO", "多进程日志日志队列已创建，待启动日志管理器")
@@ -68,6 +52,21 @@ class LogManager(OPP, IDP):
             self.log("INFO", "单进程日志管理器已启动")
             self.__started = True
 
+    @staticmethod
+    def _overwrite_config(config: Union[LoggerConfig, dict]) -> LoggerConfig:
+        if isinstance(config, dict):
+            defaults = [k for k in get_type_hints(LoggerConfig) if k not in config]
+            if defaults:
+                print(f"[日志管理器] 指定参数未识别，使用默认参数: {defaults}")
+            config = LoggerConfig(**config)
+
+        if os.getenv("LOG_PATH"):
+            config.log_path = Path(os.getenv("LOG_PATH"))
+        if os.getenv("LOG_LEVEL"):
+            config.log_level = LogLevel(os.getenv("LOG_LEVEL"))
+        os.makedirs(config.log_path, exist_ok=True)
+        return config
+
     def get_id(self):
         return f"{self._name}:{self._uuid}"
 
@@ -76,10 +75,6 @@ class LogManager(OPP, IDP):
 
     def start(self):
         if not self.__started:
-            # 动态生成未定义的快捷方法，如 self.DEBUG(), self.INFO() 等
-            for level in LOG_LEVELS:
-                if not hasattr(self, level):
-                    setattr(self, level, self._create_level_method(level))
             self.log_writer.start()
             self.__started = True
 
@@ -97,11 +92,6 @@ class LogManager(OPP, IDP):
     def status(self):
         return self.__started
 
-    def _create_level_method(self, level: str):
-        def log_method(message: str, log_id: str = None):
-            self.log(level, message, log_id)
-        return log_method
-
     def INFO(self, message: str, log_id: str = None):
         self.log("INFO", message, log_id)
 
@@ -118,7 +108,7 @@ class LogManager(OPP, IDP):
         self.log("ERROR", message, log_id)
 
     def log(self, level: str, message: str, log_id: str = None):
-        if LOG_LEVELS.get(level, 0) < LOG_LEVELS.get(self.log_level, 0):
+        if LOG_LEVELS.get(level, 0) < LOG_LEVELS.get(self.config.log_level.value, 0):
             return
         log_entry = {
             "timestamp": get_current_time(),
@@ -128,8 +118,8 @@ class LogManager(OPP, IDP):
             "process": os.getpid(),
             "message": message
         }
-        formatted = format_log(log_entry, self.log_format)
-        if self.use_mp and self.log_writer is None:
+        formatted = format_log(log_entry, self.config.log_format)
+        if self.config.multiprocess and self.log_writer is None:
             print(formatted)
         else:
             self.log_writer.enqueue(formatted)

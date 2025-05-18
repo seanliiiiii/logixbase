@@ -2,12 +2,13 @@
 
 本文档记录了 LogixBase 项目的所有重大变更。日志格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [0.2.0] - 2024-06-12
+## [0.2.2] - 2024-06-12
 ### 新增
 - SqlServer数据库标准建表代码
 
 ### 修改
 - 调整部分代码逻辑
+- 优化BaseEngine、BaseComponent处理逻辑
 
 ## [0.1.1] - 2024-06-12
 ### 修改
