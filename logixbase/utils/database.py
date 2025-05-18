@@ -4,6 +4,9 @@ import cx_Oracle
 import pymssql
 import pandas as pd
 import socket
+import os
+from pathlib import Path
+from jinja2 import Template
 
 from .schema import DatabaseConfig
 from ..protocol import DatabaseProtocol as DBP
@@ -126,10 +129,6 @@ class DealWithSql(DatabaseConnector, DatabaseExecutor):
     def is_connected(self):
         """
         检查数据库连接是否成功。
-
-        Args:
-            无
-
         Returns:
             bool: 如果数据库连接成功，则返回 True；否则返回 False。
 
@@ -160,8 +159,6 @@ class DealWithSql(DatabaseConnector, DatabaseExecutor):
     def __get_cur(self):
         """
         创建并返回一个游标对象。
-        Args:
-            无
         Returns:
             cursor: 数据库游标对象
         Raises:
@@ -176,8 +173,6 @@ class DealWithSql(DatabaseConnector, DatabaseExecutor):
     def disconnect(self):
         """
         关闭 SQL 数据库连接。
-        Args:
-            无
         Returns:
             bool: 总是返回 True，表示连接已关闭。
         说明:
@@ -294,6 +289,30 @@ class DealWithSql(DatabaseConnector, DatabaseExecutor):
             print(f"SqlServer数据库查询失败: {e}")
             self.conna.rollback()
 
+    def execute_sqlfile(self, file: [Path, str], context: dict = None):
+        cur = self.__get_cur()
+        if not Path(file).suffix.lower() == ".sql":
+            print("当前文件不是.sql文件")
+            return
+
+        with open(file, 'r', encoding='utf-8') as f:
+            sql = f.read()
+
+            if context:
+                sql = Template(sql).render(context)
+            try:
+                cur.execute(sql)
+                self.conna.commit()
+                print(f"{file}成功执行.")
+            except Exception as e:
+                print(f"Error in {file}: {e}")
+
+
+    def batch_execute_sqlfile(self, directory: [Path, str], context: dict = None):
+        for filename in os.listdir(directory):
+            if filename.endswith('.sql'):
+                self.execute_sqlfile(Path(directory).joinpath(filename), context)
+
 
 class DealWithOracle:
     """
@@ -323,8 +342,6 @@ class DealWithOracle:
     def connect(self):
         """
         获取数据库连接。
-        Args:
-            无
         Returns:
             conna (cx_Oracle.Connection): 数据库连接对象。
         """
@@ -355,8 +372,6 @@ class DealWithOracle:
     def _reconnect(self):
         """
         重新建立与Oracle数据库的连接。
-        Args:
-            无
         Returns:
             无
         Raises:
@@ -382,13 +397,8 @@ class DealWithOracle:
     def disconnect(self):
         """
         关闭连接。
-
-        Args:
-            无
-
         Returns:
             无
-
         Description:
             此方法用于关闭当前对象的连接。如果 `self.conna` 不为 None，则调用其 `close` 方法关闭连接，并将 `self.conna` 设置为 None。
         """

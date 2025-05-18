@@ -209,8 +209,6 @@ class ConfigLoader(OPP, LDP, IDP):
     def _init_share_variable(self):
         """
         初始化共享变量。
-        Args:
-            无
         Returns:
             无
         """
@@ -250,8 +248,6 @@ class ConfigLoader(OPP, LDP, IDP):
     def stop_hot_reload(self):
         """
         停止热重载功能。
-        Args:
-            无
         Returns:
             无
         """
@@ -272,8 +268,6 @@ class ConfigLoader(OPP, LDP, IDP):
     def register_mp_proxy(self):
         """
         注册多进程模式下的子进程消息代理，用于子进程与主进程热更新模块的全局配置同步。
-        Args:
-            无
         Returns:
             无
         Raises:
@@ -286,8 +280,6 @@ class ConfigLoader(OPP, LDP, IDP):
     def stop_mp_proxy(self):
         """
         停止MP代理的事件监听。
-        Args:
-            无
         Returns:
             无
         """
@@ -352,7 +344,7 @@ def load_schema(config_path: Union[Path, str], schema: Type[BaseModel]):
         schema (Type[BaseModel]): 需要创建的Schema类。
 
     Returns:
-        BaseModel: 根据配置文件创建的模型类实例。
+        根据配置文件创建的模型类实例。
 
     """
     cfg_dict = read_config(config_path)

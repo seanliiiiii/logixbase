@@ -198,7 +198,7 @@ class TinysoftFeeder(BaseFeeder):
         self.INFO(f"获取{start}至{end}期间的交易日数据: {int(len(dts))}个交易日")
         return dts
 
-    def asset_info(self, asset: str, info: Literal["basic", "trade"] = "basic", date: datetime = None):
+    def asset_info(self, asset: str, info: Literal["basic", "trade"] = "basic", date: Union[datetime, str, int] = None):
         asset = asset.lower()
         info = info.lower()
         if asset not in ["future", "stock", "etf", "index", "option"]:
