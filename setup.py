@@ -62,7 +62,7 @@ setuptools.setup(
         "uvicorn>=0.17.0",
         "fastapi>=0.70.0",
         "pandas_market_calendars>=4.0.0",
-        "paramiko==2.10.0",
+        "paramiko>=2.10.0",
     ],
     extras_require={
         "dev": [

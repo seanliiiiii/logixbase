@@ -46,6 +46,7 @@ class LogManager(OPP, IDP):
                 self.log("INFO", "多进程日志日志队列已创建，待启动日志管理器")
             else:
                 self.log_writer = None
+            self.__started = False
         else:
             self.log_writer = LogWriter(self.config)
             self.log_writer.start()

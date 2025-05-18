@@ -63,7 +63,7 @@ class PluginManager:
                 try:
                     plugin.on_init()
                     if self.engine and self.engine.logger:
-                        self.engine.logger.DEBUG(f"插件 '{plugin_id}' 已初始化")
+                        self.engine.logger.INFO(f"插件 '{plugin_id}' 已初始化")
                 except Exception as e:
                     if self.engine and self.engine.logger:
                         self.engine.logger.ERROR(f"初始化插件 '{plugin_id}' 时出错: {e}")
@@ -79,7 +79,7 @@ class PluginManager:
                 try:
                     plugin.start()
                     if self.engine and self.engine.logger:
-                        self.engine.logger.DEBUG(f"插件 '{plugin_id}' 已启动")
+                        self.engine.logger.INFO(f"插件 '{plugin_id}' 已启动")
                 except Exception as e:
                     if self.engine and self.engine.logger:
                         self.engine.logger.ERROR(f"启动插件 '{plugin_id}' 时出错: {e}")
@@ -95,7 +95,7 @@ class PluginManager:
                 try:
                     plugin.stop()
                     if self.engine and self.engine.logger:
-                        self.engine.logger.DEBUG(f"插件 '{plugin_id}' 已停止")
+                        self.engine.logger.INFO(f"插件 '{plugin_id}' 已停止")
                 except Exception as e:
                     if self.engine and self.engine.logger:
                         self.engine.logger.ERROR(f"停止插件 '{plugin_id}' 时出错: {e}")
@@ -124,7 +124,7 @@ class PluginManager:
                 try:
                     plugin.on_exit()
                     if self.engine and self.engine.logger:
-                        self.engine.logger.DEBUG(f"插件 '{plugin_id}' 已退出")
+                        self.engine.logger.INFO(f"插件 '{plugin_id}' 已退出")
                 except Exception as e:
                     if self.engine and self.engine.logger:
                         self.engine.logger.ERROR(f"插件 '{plugin_id}' 退出时出错: {e}")

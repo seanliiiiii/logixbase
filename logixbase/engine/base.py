@@ -9,7 +9,7 @@ from pathlib import Path
 from .constant import Status
 from .schema import EngineConfig
 from ..protocol.mod import OperationProtocol
-from ..configer import ConfigLoader, BaseConfig, read_config
+from ..configer import ConfigLoader
 from ..logger.core import LogManager
 from ..executor import MultiTaskExecutor
 from ..plugin.manager import PluginManager
@@ -35,6 +35,39 @@ class BaseEngine(ABC):
         self.status = Status.INIT  # 引擎状态
         self._register_signal_handlers()
         self._initialized = False
+
+    def STATUS(self, status: str):
+        self.status = Status(status.upper())
+
+    def INFO(self, msg: str):
+        if self.logger is not None:
+            self.logger.INFO(msg)
+        else:
+            print(f"[{self.__name__}] [INFO] {msg}]")
+
+    def ERROR(self, msg: str):
+        if self.logger is not None:
+            self.logger.ERROR(msg)
+        else:
+            print(f"[{self.__name__}] [ERROR] {msg}]")
+
+    def DEBUG(self, msg: str):
+        if self.logger is not None:
+            self.logger.DEBUG(msg)
+        else:
+            print(f"[{self.__name__}] [DEBUG] {msg}]")
+
+    def WARNING(self, msg: str):
+        if self.logger is not None:
+            self.logger.WARNING(msg)
+        else:
+            print(f"[{self.__name__}] [WARNING] {msg}]")
+
+    def CRITICAL(self, msg: str):
+        if self.logger is not None:
+            self.logger.CRITICAL(msg)
+        else:
+            print(f"[{self.__name__}] [CRITICAL] {msg}]")
 
     def on_init(self):
         """初始化：配置解析、任务注册、资源准备"""
@@ -95,8 +128,9 @@ class BaseEngine(ABC):
             self.logger.start()
 
     def setup_executor(self):
-        mode = self.config.executor.mode
-        self.executor = MultiTaskExecutor(mode, **self.config.executor.__dict__)
+        """系统后台执行器，主要用于插件等功能的后台执行"""
+        self.executor = MultiTaskExecutor(**self.config.executor.__dict__)
+        self.executor.bind_share(logger=self.logger)
 
     def _register_signal_handlers(self):
         signal.signal(signal.SIGINT, self._handle_exit)
@@ -175,7 +209,7 @@ class BaseEngine(ABC):
         self.on_exit()
         sys.exit(0)
 
-    def run(self, mode="cli"):
+    def run(self):
         try:
             self.logger.INFO("引擎初始化中...")
             self.status = Status.INITIALIZING
@@ -197,6 +231,15 @@ class BaseEngine(ABC):
             self.on_exception(e)
         finally:
             self.on_exit()
+
+    def register_to_executor(self, func, shared: dict = None, *args, group=None, tags=None, task_name=None, **kwargs):
+        if shared:
+            self.executor.bind_share(**shared)
+        self.executor.submit(func, args=args, kwargs=kwargs, group=group, tags=tags, task_name=task_name)
+
+    def start_thread(self):
+        self.executor.start()
+        self.logger.start()
 
 
 class BaseComponent(OperationProtocol):
@@ -226,6 +269,36 @@ class BaseComponent(OperationProtocol):
 
     def get_id(self) -> str:
         return f"{self._name}:{self._uuid}"
+
+    def INFO(self, msg: str):
+        if self.logger is not None:
+            self.logger.INFO(msg)
+        else:
+            print(f"[{self._name}] [INFO] {msg}]")
+
+    def ERROR(self, msg: str):
+        if self.logger is not None:
+            self.logger.ERROR(msg)
+        else:
+            print(f"[{self._name}] [ERROR] {msg}]")
+
+    def DEBUG(self, msg: str):
+        if self.logger is not None:
+            self.logger.DEBUG(msg)
+        else:
+            print(f"[{self._name}] [DEBUG] {msg}]")
+
+    def WARNING(self, msg: str):
+        if self.logger is not None:
+            self.logger.WARNING(msg)
+        else:
+            print(f"[{self._name}] [WARNING] {msg}]")
+
+    def CRITICAL(self, msg: str):
+        if self.logger is not None:
+            self.logger.CRITICAL(msg)
+        else:
+            print(f"[{self._name}] [CRITICAL] {msg}]")
 
     def bind(self, engine):
         """

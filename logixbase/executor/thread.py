@@ -25,6 +25,10 @@ class ThreadExecutor(BaseExecutor):
         self.reset_tracking()
 
         self._futures = {}
+
+        if not self.tasks:
+            return
+
         self._executor = ThreadPoolExecutor(max_workers=self.max_workers)
         init_worker(self._context)
         for task in self.tasks:

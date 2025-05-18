@@ -39,6 +39,9 @@ class ProcessExecutor(BaseExecutor):
     def start(self):
         self.reset_tracking()
 
+        if not self.tasks:
+            return
+
         self._task_queue = list(self.tasks)
         self._futures_batches = []
 

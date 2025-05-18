@@ -71,8 +71,6 @@ class ConfigLoader(OPP, LDP, IDP):
         self._name = "配置管理器"
         self._uuid: str = str(uuid.uuid4())
 
-        self.config_path: Union[str, Path] = ""
-
         self._registry_schema = {}
         self._share_data: Union[dict, None] = None
         self._share_event: Union[mp.Event, None] = None
