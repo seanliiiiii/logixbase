@@ -54,7 +54,7 @@ echo.
 
 :: === Step 6: Build project ===
 echo [INFO] Building the project...
-python setup.py sdist bdist_wheel
+python -m build
 if %errorlevel% neq 0 (
     echo [ERROR] Build failed!
     exit /b %errorlevel%
