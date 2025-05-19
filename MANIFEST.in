@@ -2,11 +2,14 @@ include LICENSE
 include README.md
 include pyproject.toml
 
-# 包含配置文件模板
-recursive-include logixbase/configer/templates *.yaml *.json
-
 # 包含可能的数据文件
-recursive-include logixbase/feeder/config *.yaml *.json
+include logixbase/*.yaml
+include logixbase/*.yml
+include logixbase/*.ini
+include logixbase/*.json
+include logixbase/*.toml
+include logixbase/py.typed
+recursive-include logixbase *.yaml *.json *.yml *.ini *.toml
 
 # 排除不必要的文件
 global-exclude *.py[cod] __pycache__ *.so

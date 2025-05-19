@@ -76,6 +76,7 @@ dev = [
 "Documentation" = "https://github.com/339640170/logixbase"
 
 [tool.setuptools]
+include-package-data = true
 # 如果包含非Python文件，可以在这里指定包含规则
 package-data = {"logixbase" = ["py.typed", "*.yaml", "*.yml", "*.ini", "*.json", "*.toml"]}
 
