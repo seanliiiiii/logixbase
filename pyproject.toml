@@ -81,6 +81,11 @@ include-package-data = true
 [tool.setuptools.package-data]
 logixbase = ["*.yaml", "*.yml", "*.ini", "*.json", "*.toml", "py.typed"]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["logixbase", "logixbase.*"]
+
+
 [tool.black]
 line-length = 88
 target-version = ["py39", "py310", "py311"]
