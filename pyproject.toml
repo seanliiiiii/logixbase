@@ -77,7 +77,7 @@ dev = [
 
 [tool.setuptools]
 # 如果包含非Python文件，可以在这里指定包含规则
-package-data = {"logixbase" = ["py.typed"]}
+package-data = {"logixbase" = ["py.typed", "*.yaml", "*.yml", "*.ini", "*.json", "*.toml"]}
 
 [tool.black]
 line-length = 88

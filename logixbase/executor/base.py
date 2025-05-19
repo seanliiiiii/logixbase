@@ -11,8 +11,6 @@ from ..protocol import OperationProtocol as OPP, IdentityProtocol as IDP
 class BaseExecutor(ABC, OPP, IDP):
     """
     任务执行器基类
-    Args:
-        无
     Returns:
         无
     Attributes:
@@ -88,8 +86,6 @@ class BaseExecutor(ABC, OPP, IDP):
     def stop(self):
         """
         关闭当前实例。
-        Args:
-            无
         Returns:
             无
         Raises:
@@ -139,8 +135,6 @@ class BaseExecutor(ABC, OPP, IDP):
     def reset_tracking(self):
         """
         重置跟踪数据。
-        Args:
-            无
         Returns:
             无
         说明:
@@ -155,8 +149,6 @@ class BaseExecutor(ABC, OPP, IDP):
     def reset(self):
         """
         重置方法。
-        Args:
-            无
         Returns:
             无
         Raises:
@@ -212,8 +204,6 @@ class BaseExecutor(ABC, OPP, IDP):
     def get_task_ids(self):
         """
         获取任务ID列表。
-        Args:
-            无
         Returns:
             List[int]: 包含所有任务ID的列表。
         """

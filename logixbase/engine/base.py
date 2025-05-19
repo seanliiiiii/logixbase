@@ -3,7 +3,7 @@ import sys
 import signal
 import traceback
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Union
+from typing import Dict, Any, Union, Type
 from pathlib import Path
 
 from .constant import Status
@@ -149,11 +149,11 @@ class BaseEngine(ABC):
         return self.plugin_manager.get_plugins_by_type(plugin_type)
 
     # 组件管理方法
-    def register_component(self, component_id, component):
+    def register_component(self, component) -> None:
         """注册组件"""
         component.bind(self)
-        self.components[component_id] = component
-        self.logger.INFO(f"组件 {component_id} 已注册")
+        self.components[component.get_id()] = component
+        self.logger.INFO(f"组件 {component.get_name()} 已注册")
         return component
         
     def start_component(self, component_id):

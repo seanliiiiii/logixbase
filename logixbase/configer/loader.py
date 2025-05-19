@@ -335,22 +335,23 @@ def create_schema(cfg_dict: dict, schema: Type[BaseModel]):
     return instance
 
 
-def load_schema(config_path: Union[Path, str], schema: Type[BaseModel]):
+def load_schema(config_path: Union[Path, str], schema: Type[BaseModel], spec: str = ""):
     """
     加载指定路径下的配置文件，并返回相应的模型类实例。
 
     Args:
         config_path (Union[Path, str]): 配置文件的路径，可以是Path对象或字符串类型。
         schema (Type[BaseModel]): 需要创建的Schema类。
-
+        spec: 指定读取配置文件中的配置字段
     Returns:
         根据配置文件创建的模型类实例。
-
     """
     cfg_dict = read_config(config_path)
     cfg_dict = {k.lower(): i for k, i in cfg_dict.items()}
 
-    if schema.__name__.lower() in cfg_dict:
+    if spec:
+        create_schema(cfg_dict[spec.lower()], schema)
+    elif schema.__name__.lower() in cfg_dict:
         return create_schema(cfg_dict[schema.__name__.lower()], schema)
     else:
         return create_schema(cfg_dict[schema.__name__.lower().split("config")[0]], schema)
