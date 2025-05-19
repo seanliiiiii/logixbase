@@ -3,13 +3,8 @@ include README.md
 include pyproject.toml
 
 # 包含可能的数据文件
-include logixbase/*.yaml
-include logixbase/*.yml
-include logixbase/*.ini
-include logixbase/*.json
-include logixbase/*.toml
-include logixbase/py.typed
 recursive-include logixbase *.yaml *.json *.yml *.ini *.toml
+include logixbase/py.typed
 
 # 排除不必要的文件
 global-exclude *.py[cod] __pycache__ *.so
