@@ -14,7 +14,6 @@ echo [INFO] Project version detected: v%PROJECT_VERSION%
 
 :: === Step 2: Git commit & push to master ===
 echo [INFO] Committing changes to Git...
-git pull origin master
 git add .
 git commit -m "Auto build and release: v%PROJECT_VERSION%"
 git push origin HEAD:master
