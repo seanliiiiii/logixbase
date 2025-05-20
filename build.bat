@@ -1,53 +1,69 @@
 @echo off
-setlocal enabledelayedexpansion
-set PYTHONUTF8=1
+setlocal EnableDelayedExpansion
+chcp 65001>nul
 
-:: === Step 1: Get version from get_version.py ===
-FOR /F "delims=" %%F IN ('python get_version.py') DO (
-    SET "PROJECT_VERSION=%%F"
-)
-if /I "%PROJECT_VERSION%"=="VERSION_NOT_FOUND" (
-    echo [ERROR] Failed to extract version.
+REM ------------------------------------------------------------------------
+REM Release Script: version-based branch creation and Git merge
+REM Save this file as "release.bat" (NOT git.bat) in your repository root.
+REM It must not shadow the 'git' command. Double-click to run.
+REM Assumes:
+REM   • Git repo is at this level (script parent folder).
+REM   • Project package is in subfolder named same as this folder.
+REM Requirements: Windows, Git.exe in PATH.
+REM ------------------------------------------------------------------------
+
+REM --- Change to script directory ---
+pushd "%~dp0"
+set "SCRIPT_DIR=%CD%"
+echo Script directory: %SCRIPT_DIR%
+
+REM --- Derive project/package folder name ---
+for %%F in ("%SCRIPT_DIR%") do set "PROJECT_NAME=%%~nF"
+echo Project name: %PROJECT_NAME%
+
+REM --- Locate __init__.py and extract __version__ ---
+set "PACKAGE_DIR=%SCRIPT_DIR%\%PROJECT_NAME%"
+set "INIT_FILE=%PACKAGE_DIR%\__init__.py"
+if not exist "%INIT_FILE%" (
+    echo ERROR: __init__.py not found in %PACKAGE_DIR%
+    popd
+    pause
     exit /b 1
 )
-echo [INFO] Project version detected: v%PROJECT_VERSION%
+for /f "tokens=2 delims==" %%V in ('findstr /R "__version__ *= *" "%INIT_FILE%"') do set "VER_RAW=%%V"
+rem Strip surrounding quotes and spaces
+set "VER=!VER_RAW:"=!"
+set "VER=!VER: =!"
+echo Version: !VER!
 
-:: === Step 4: Check if version exists on PyPI ===
-echo [INFO] Checking PyPI for existing version...
-python -c "import requests, sys; resp = requests.get(f'https://pypi.org/pypi/logixbase/json'); versions = resp.json().get('releases', {}); sys.exit(0 if '%PROJECT_VERSION%' not in versions else 1)"
-if %errorlevel% equ 1 (
-    echo [INFO] Version v%PROJECT_VERSION% already exists on PyPI. Skipping build and upload.
-    goto :end
+REM --- Git operations using git.exe to avoid recursion ---
+echo Committing local changes...
+git.exe add .
+git.exe commit -m "Release version !VER!" || echo No changes to commit.
+
+echo Determining current branch...
+for /f "tokens=*" %%B in ('git.exe rev-parse --abbrev-ref HEAD') do set "CURRENT=%%B"
+echo Current branch: !CURRENT!
+
+echo Switching to master...
+git.exe checkout master
+
+echo Pulling latest master...
+git.exe pull origin master
+
+echo Merging !CURRENT! into master...
+if /I NOT "!CURRENT!"=="master" (
+    git.exe merge "!CURRENT!" || echo Merge skipped.
 )
 
-:: === Step 5: Clean previous builds ===
-echo [INFO] Cleaning old build files...
-if exist dist rmdir /s /q dist
-if exist build rmdir /s /q build
-for /d %%i in (*.egg-info) do (
-    rmdir /s /q "%%i"
-)
-echo.
+echo Pushing master to origin...
+git.exe push origin master
 
-:: === Step 6: Build project ===
-echo [INFO] Building the project...
-python -m build
-if %errorlevel% neq 0 (
-    echo [ERROR] Build failed!
-    exit /b %errorlevel%
-)
-echo.
+echo Creating and pushing version branch v!VER!...
+git.exe checkout -b v!VER!
+git.exe push -u origin v!VER!
 
-:: === Step 7: Upload to PyPI ===
-echo [INFO] Uploading to PyPI...
-twine upload dist/*
-if %errorlevel% neq 0 (
-    echo [ERROR] PyPI upload failed!
-    exit /b %errorlevel%
-)
-echo.
-
-:end
-echo [SUCCESS] Completed: Git pushed to master and version branch, and uploaded to PyPI (if new).
+popd
+echo Done.
 pause
 endlocal
