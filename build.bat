@@ -1,3 +1,4 @@
+```batch
 @echo off
 setlocal EnableDelayedExpansion
 chcp 65001>nul
@@ -31,8 +32,9 @@ if not exist "%INIT_FILE%" (
     exit /b 1
 )
 for /f "tokens=2 delims==" %%V in ('findstr /R "__version__ *= *" "%INIT_FILE%"') do set "VER_RAW=%%V"
-rem Strip surrounding quotes and spaces
+rem Strip surrounding quotes (double and single) and spaces
 set "VER=!VER_RAW:"=!"
+set "VER=!VER:'=!"
 set "VER=!VER: =!"
 echo Version: !VER!
 
@@ -67,3 +69,4 @@ popd
 echo Done.
 pause
 endlocal
+```
