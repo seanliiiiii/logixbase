@@ -78,6 +78,7 @@ class LogManager(OPP, IDP):
         if not self.__started:
             self.log_writer.start()
             self.__started = True
+            self.log("INFO", "日志管理器已启动")
 
     def join(self):
         pass

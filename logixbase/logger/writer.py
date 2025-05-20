@@ -50,7 +50,7 @@ class LogWriter(threading.Thread):
             log_file.write(log_message + "\n")
             log_file.flush()
             if self.config.to_console:
-                print(log_message)
+                print(eval(log_message)["timestamp"], eval(log_message)["message"])
 
             if self.stop_event.is_set() and self.log_queue.empty():
                 break

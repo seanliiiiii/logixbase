@@ -483,7 +483,7 @@ def normalize_value(value, expected_type, field_name=""):
             return float(str(value).replace(",", ""))
         elif expected_type == str:
             value = str(value).strip().replace("%", "%%")
-            if all([i.isdigit() for i in value.split("e")]):
+            if all([i.isdigit() for i in value.split("e")]) and "e" in value.lower():
                 value = eval(value)
             return value
         elif expected_type == dict:

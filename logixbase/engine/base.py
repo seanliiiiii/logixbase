@@ -39,6 +39,10 @@ class BaseEngine(ABC):
         self._register_signal_handlers()
         self._initialized = False
 
+        self.setup_configer()
+        self.setup_logger()
+        self.setup_executor()
+
     def STATUS(self, status: str):
         self.status = Status(status.upper())
 
@@ -74,9 +78,9 @@ class BaseEngine(ABC):
 
     def on_init(self):
         """初始化：配置解析、任务注册、资源准备"""
-        self.setup_configer()
-        self.setup_logger()
-        self.setup_executor()
+        self.logger.start()
+        if self.executor.tasks:
+            self.executor.start()
         # 初始化所有插件
         self.plugin_manager.init_all()
 
@@ -89,8 +93,7 @@ class BaseEngine(ABC):
         """收尾清理操作"""
         # 停止所有插件
         self.plugin_manager.stop_all()
-
-        if hasattr(self.executor, "join"):
+        if self.executor.tasks:
             self.executor.join()
 
         # 停止所有组件
@@ -100,6 +103,7 @@ class BaseEngine(ABC):
                 self.logger.INFO(f"组件 {component_id} 已停止")
             except Exception as e:
                 self.logger.ERROR(f"停止组件 {component_id} 时出错: {e}")
+                self.logger.ERROR(traceback.format_exc())
 
     def on_exit(self):
         """退出处理：资源释放、日志关闭等"""
@@ -117,6 +121,7 @@ class BaseEngine(ABC):
                 plugin.on_exception(exc)
             except Exception as e:
                 self.logger.ERROR(f"插件 '{plugin_id}' 异常处理器中出错: {e}")
+                self.logger.ERROR(traceback.format_exc())
         self.STATUS("ERROR")
 
     def setup_configer(self):
@@ -170,6 +175,7 @@ class BaseEngine(ABC):
                 return True
             except Exception as e:
                 self.logger.ERROR(f"启动组件 {component_id} 时出错: {e}")
+                self.logger.ERROR(traceback.format_exc())
         else:
             self.logger.WARNING(f"未找到组件 {component_id}")
         return False
@@ -183,6 +189,7 @@ class BaseEngine(ABC):
                 return True
             except Exception as e:
                 self.logger.ERROR(f"停止组件 {component_id} 时出错: {e}")
+                self.logger.ERROR(traceback.format_exc())
         else:
             self.logger.WARNING(f"未找到组件 {component_id}")
         return False
@@ -195,6 +202,7 @@ class BaseEngine(ABC):
                     return self.components[component_id].get_status()
                 except Exception as e:
                     self.logger.ERROR(f"获取组件 {component_id} 状态时出错: {e}")
+                    self.logger.ERROR(traceback.format_exc())
                     return {"status": Status.ERROR, "error": str(e)}
             return None
         return {k: v.get_status() for k, v in self.components.items()}
@@ -242,10 +250,6 @@ class BaseEngine(ABC):
             self.executor.bind_share(**shared)
         self.executor.submit(func, args=args, kwargs=kwargs, group=group, tags=tags, task_name=task_name)
 
-    def start_thread(self):
-        self.executor.start()
-        self.logger.start()
-
     def add_mail(self, subject: str, content: str, mail_to: list):
         """向消息管理器注册待发送邮件"""
         mail_id = max(self.mails) + 1 if self.mails else 1
@@ -262,6 +266,7 @@ class BaseEngine(ABC):
                 sent += int(send_email_text(subject, content, mail_to, self.config.mail))
             except Exception as e:
                 self.ERROR(f"邮件发送失败: {subject}, {content}, {e}")
+                self.logger.ERROR(traceback.format_exc())
         self.INFO(f"邮件发送成功：总计{sent}，失败: {int(len(self.mails)) - sent}")
 
 
@@ -354,8 +359,8 @@ class BaseComponent(OperationProtocol):
             return True
         except Exception as e:
             self.STATUS("ERROR")
-            if self.logger:
-                self.logger.ERROR(f"组件{self._name}启动失败: {str(e)}")
+            self.ERROR(f"组件{self._name}启动失败: {str(e)}")
+            self.ERROR(traceback.format_exc())
             raise
 
     def stop(self):
@@ -363,21 +368,19 @@ class BaseComponent(OperationProtocol):
         停止组件
         """
         if self.status not in [Status.RUNNING, Status.INITIALIZING]:
-            if self.logger:
-                self.logger.WARNING(f"组件{self._name}已停止: {self.status}")
+            self.WARNING(f"组件{self._name}已停止: {self.status}")
             return False
 
         try:
             self.STATUS("STOPPING")
             self._stop_execution()
             self.STATUS("STOPPED")
-            if self.logger:
-                self.logger.INFO(f"组件{self._name}成功终止")
+            self.logger.INFO(f"组件{self._name}成功终止")
             return True
         except Exception as e:
             self.STATUS("ERROR")
-            if self.logger:
-                self.logger.ERROR(f"组件{self._name}终止失败: {str(e)}")
+            self.logger.ERROR(f"组件{self._name}终止失败: {str(e)}")
+            self.logger.ERROR(traceback.format_exc())
             raise
 
     def join(self, timeout=None):

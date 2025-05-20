@@ -257,6 +257,7 @@ class TqsdkFeeder(BaseFeeder):
         trade_info = pd.DataFrame(info, columns=cols)
         return trade_info
 
+    @silence_asyncio_warning
     def asset_quote(self, asset: str, start: Union[datetime, str, int], end: Union[datetime, str, int],
                     interval: Union[str, int], ticker: Union[list, tuple] = None, underlying: Union[list, tuple] = None):
         asset = asset.lower()
@@ -271,6 +272,7 @@ class TqsdkFeeder(BaseFeeder):
         quote = quote.drop_duplicates(subset=["DateTime", "Ticker"])
         return quote
 
+    @silence_asyncio_warning
     def future_quote(self, start: Union[datetime, str, int], end: Union[datetime, str, int], interval: str,
                      ticker: Union[list, tuple]):
         # 统一日期格式
