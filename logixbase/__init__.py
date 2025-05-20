@@ -1,6 +1,6 @@
 # LogixBase - 高度模块化的量化交易策略开发框架
 # 版本信息
-__version__ = '0.3.0'
+__version__ = '0.3.1'
 __author__ = 'Sean'
 __email__ = 'trader@logixquant.com'
 
