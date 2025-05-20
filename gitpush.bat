@@ -1,3 +1,4 @@
+```batch
 @echo off
 setlocal EnableDelayedExpansion
 chcp 65001>nul
@@ -30,9 +31,10 @@ if not exist "%INIT_FILE%" (
     pause
     exit /b 1
 )
-for /f "tokens=2 delims==" %%V in ('findstr /R "__version__ *=" "%INIT_FILE%"') do set "VER_RAW=%%V"
-rem Strip surrounding quotes and spaces
+for /f "tokens=2 delims==" %%V in ('findstr /R "__version__ *= *" "%INIT_FILE%"') do set "VER_RAW=%%V"
+rem Strip surrounding quotes (double and single) and spaces
 set "VER=!VER_RAW:"=!"
+set "VER=!VER:'=!"
 set "VER=!VER: =!"
 echo Version: !VER!
 
@@ -59,11 +61,12 @@ if /I NOT "!CURRENT!"=="master" (
 echo Pushing master to origin...
 git.exe push origin master
 
-echo Creating and pushing version branch "!VER!"...
-git.exe checkout -b "!VER!"
-git.exe push -u origin "!VER!"
+echo Creating and pushing version branch v!VER!...
+git.exe checkout -b v!VER!
+git.exe push -u origin v!VER!
 
 popd
 echo Done.
 pause
 endlocal
+```
