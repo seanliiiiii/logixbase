@@ -35,6 +35,8 @@ class ThreadExecutor(BaseExecutor):
             future = self._executor.submit(self._wrap_task, task)
             self._futures[future] = task["task_id"]
 
+        self._started = True
+
     def join(self, return_results=True):
         for future in as_completed(self._futures):
             task_id, result, elapsed, memused = future.result()

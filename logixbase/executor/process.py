@@ -65,6 +65,8 @@ class ProcessExecutor(BaseExecutor):
                 future = pool.submit(_pool_worker, task)
                 self._futures_batches.append(future)
 
+        self._started = True
+
     def join(self, return_results=True):
 
         if self.mode == "pool":
@@ -79,15 +81,16 @@ class ProcessExecutor(BaseExecutor):
                 pool.close()
                 pool.join()
         else:
-            pool = self._futures_batches.pop(0)
-            for future in as_completed(self._futures_batches):
-                task_id, result, elapsed, mem_used = future.result()
-                self._statuses[task_id] = "done" if result is not None else "error"
-                self._elapsed[task_id] = elapsed
-                self._memory_usage[task_id] = mem_used
-                if return_results:
-                    self._results[task_id] = result
-            pool.shutdown()
+            if self._futures_batches:
+                pool = self._futures_batches.pop(0)
+                for future in as_completed(self._futures_batches):
+                    task_id, result, elapsed, mem_used = future.result()
+                    self._statuses[task_id] = "done" if result is not None else "error"
+                    self._elapsed[task_id] = elapsed
+                    self._memory_usage[task_id] = mem_used
+                    if return_results:
+                        self._results[task_id] = result
+                pool.shutdown()
 
         return self._results if return_results else None
 

@@ -309,7 +309,6 @@ class DealWithSql(DatabaseConnector, DatabaseExecutor):
             try:
                 cur.execute(sql)
                 self.conna.commit()
-                print(f"{file}成功执行.")
                 res = True
             except Exception as e:
                 print(f"{file}执行失败: {e}")

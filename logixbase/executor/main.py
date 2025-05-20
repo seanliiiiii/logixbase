@@ -55,6 +55,7 @@ class MultiTaskExecutor(BaseExecutor):
 
     def start(self):
         self.executor.start()
+        self._started = True
 
     def join(self, return_results=True):
         return self.executor.join(return_results=return_results)

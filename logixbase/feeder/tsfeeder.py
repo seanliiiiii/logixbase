@@ -111,7 +111,7 @@ class TinysoftFeeder(BaseFeeder):
     def disconnect(self):
         """Disconnect tinysoft connection"""
         self._tsl.Disconnect()
-        if not self.is_connected():
+        if not self.is_connected:
             self.INFO(f"天软连接已断开：用户名{self.conn_cfg.username}")
 
     def check_connect(self):

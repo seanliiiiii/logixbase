@@ -49,11 +49,17 @@ class BaseExecutor(ABC, OPP, IDP):
 
         self._context = None
 
+        self._started: bool = False
+
     def get_name(self) -> str:
         return self._name
 
     def get_id(self) -> str:
         return f"{self._name}:{self._uuid}"
+
+    @property
+    def is_started(self) -> bool:
+        return self._started
 
     @abstractmethod
     def start(self):

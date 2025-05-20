@@ -1,10 +1,14 @@
 import uuid
 import sys
 import signal
+from datetime import datetime
 import traceback
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Union
 from pathlib import Path
+from collections import defaultdict
+
+import pandas as pd
 
 from .constant import Status
 from .schema import EngineConfig
@@ -93,16 +97,16 @@ class BaseEngine(ABC):
         """收尾清理操作"""
         # 停止所有插件
         self.plugin_manager.stop_all()
-        if self.executor.tasks:
+        if self.executor.is_started:
             self.executor.join()
 
         # 停止所有组件
         for component_id, component in self.components.items():
             try:
                 component.stop()
-                self.logger.INFO(f"组件 {component_id} 已停止")
+                self.logger.INFO(f"组件[{component.get_name()}]已停止")
             except Exception as e:
-                self.logger.ERROR(f"停止组件 {component_id} 时出错: {e}")
+                self.logger.ERROR(f"停止组件[{component_id}]时出错: {e}")
                 self.logger.ERROR(traceback.format_exc())
 
     def on_exit(self):
@@ -163,45 +167,48 @@ class BaseEngine(ABC):
         """注册组件"""
         component.bind(self)
         self.components[component.get_id()] = component
-        self.logger.INFO(f"组件 {component.get_name()} 已注册")
+        self.logger.INFO(f"组件[{component.get_name()}]已注册")
         return component
 
     def start_component(self, component_id):
         """启动组件"""
         if component_id in self.components:
+            name = self.components[component_id].get_name()
             try:
                 self.components[component_id].start()
-                self.logger.INFO(f"组件 {component_id} 已启动")
+                self.logger.INFO(f"组件[{name}]已启动")
                 return True
             except Exception as e:
-                self.logger.ERROR(f"启动组件 {component_id} 时出错: {e}")
+                self.logger.ERROR(f"启动组件[{name}]时出错: {e}")
                 self.logger.ERROR(traceback.format_exc())
         else:
-            self.logger.WARNING(f"未找到组件 {component_id}")
+            self.logger.WARNING(f"未找到组件[{component_id}]")
         return False
 
     def stop_component(self, component_id):
         """停止组件"""
         if component_id in self.components:
+            component = self.components[component_id]
             try:
-                self.components[component_id].stop()
-                self.logger.INFO(f"组件 {component_id} 已停止")
+                component.stop()
+                self.logger.INFO(f"组件[{component.get_name()}]已停止")
                 return True
             except Exception as e:
-                self.logger.ERROR(f"停止组件 {component_id} 时出错: {e}")
+                self.logger.ERROR(f"停止组件[{component.get_name()}]时出错: {e}")
                 self.logger.ERROR(traceback.format_exc())
         else:
-            self.logger.WARNING(f"未找到组件 {component_id}")
+            self.logger.WARNING(f"未找到组件[{component_id}]")
         return False
 
     def get_component_status(self, component_id=None):
         """获取组件状态"""
         if component_id:
             if component_id in self.components:
+                component = self.components[component_id]
                 try:
-                    return self.components[component_id].get_status()
+                    return component.get_status()
                 except Exception as e:
-                    self.logger.ERROR(f"获取组件 {component_id} 状态时出错: {e}")
+                    self.logger.ERROR(f"获取组件[{component.get_name()}] 状态时出错: {e}")
                     self.logger.ERROR(traceback.format_exc())
                     return {"status": Status.ERROR, "error": str(e)}
             return None
@@ -244,6 +251,7 @@ class BaseEngine(ABC):
             self.on_exception(e)
         finally:
             self.on_exit()
+            self.mail_notification()
 
     def register_to_executor(self, func, shared: dict = None, *args, group=None, tags=None, task_name=None, **kwargs):
         if shared:
@@ -252,12 +260,13 @@ class BaseEngine(ABC):
 
     def add_mail(self, subject: str, content: str, mail_to: list):
         """向消息管理器注册待发送邮件"""
-        mail_id = max(self.mails) + 1 if self.mails else 1
-        self.mails[mail_id] = (subject, content, mail_to)
+        if mail_to:
+            mail_id = max(self.mails) + 1 if self.mails else 1
+            self.mails[mail_id] = (subject, content, mail_to)
 
     def mail_notification(self):
         """统一发送邮件"""
-        if not self.mails:
+        if not self.mails or not self.config.mail.password:
             return
         sent = 0
         for mail_id, mail in self.mails.items():
@@ -291,6 +300,13 @@ class BaseComponent(OperationProtocol):
         self.engine = None
         self.logger = None
         self._thread = None
+
+        self.sys_mail: dict = defaultdict(list)
+        self.mailto_list: list = []
+
+    def add_sys_mail(self, level: str, section: str, msg: str):
+        """添加系统级通知信息：邮件"""
+        self.sys_mail[level].append((datetime.now().strftime("%Y-%m-%d %H:%M:%S"), section, msg))
 
     def get_name(self) -> str:
         return self._name
@@ -347,7 +363,7 @@ class BaseComponent(OperationProtocol):
         """
         if self.status not in [Status.INIT, Status.STOPPED]:
             if self.logger:
-                self.logger.WARNING(f"组件{self._name}已启动或已报错: {self.status}")
+                self.logger.WARNING(f"组件[{self._name}]已启动或已报错: {self.status}")
             return False
 
         try:
@@ -355,11 +371,11 @@ class BaseComponent(OperationProtocol):
             self._execute()
             self.STATUS("RUNNING")
             if self.logger:
-                self.logger.INFO(f"组件{self._name}已启动")
+                self.logger.INFO(f"组件[{self._name}]已启动")
             return True
         except Exception as e:
             self.STATUS("ERROR")
-            self.ERROR(f"组件{self._name}启动失败: {str(e)}")
+            self.ERROR(f"组件[{self._name}]启动失败: {str(e)}")
             self.ERROR(traceback.format_exc())
             raise
 
@@ -368,20 +384,28 @@ class BaseComponent(OperationProtocol):
         停止组件
         """
         if self.status not in [Status.RUNNING, Status.INITIALIZING]:
-            self.WARNING(f"组件{self._name}已停止: {self.status}")
+            self.WARNING(f"组件[{self._name}]已停止: {self.status.value}")
             return False
 
         try:
             self.STATUS("STOPPING")
             self._stop_execution()
             self.STATUS("STOPPED")
-            self.logger.INFO(f"组件{self._name}成功终止")
+            self.logger.INFO(f"组件[{self._name}]成功终止")
             return True
         except Exception as e:
             self.STATUS("ERROR")
-            self.logger.ERROR(f"组件{self._name}终止失败: {str(e)}")
+            self.logger.ERROR(f"组件[{self._name}]终止失败: {str(e)}")
             self.logger.ERROR(traceback.format_exc())
             raise
+        finally:
+            for (level, mails) in self.sys_mail.items():
+                subject = f"[{level.upper()}] {self._name} 组件已执行完成"
+                content = pd.DataFrame(mails, columns=["发生时间", "类别", "消息"])
+                content.index = content.index + 1
+                content.index.name = "ID"
+                content = content.reset_index().to_html(classes=["table-responsive"])
+                self.engine.add_mail(subject, content, self.mailto_list)
 
     def join(self, timeout=None):
         """
