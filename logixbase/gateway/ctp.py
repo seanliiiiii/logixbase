@@ -1265,13 +1265,13 @@ class CtpTickClean:
         if self._logger is not None:
             self._logger.INFO(msg)
         else:
-            print(f"[CtpGateway | Cleaner] [INFO] {msg}]")
+            print(f"[CtpGateway | Cleaner] [INFO] {msg}")
 
     def ERROR(self, msg: str):
         if self._logger is not None:
             self._logger.ERROR(msg)
         else:
-            print(f"[CtpGateway | Cleaner] [ERROR] {msg}]")
+            print(f"[CtpGateway | Cleaner] [ERROR] {msg}")
 
     def on_init(self):
         self.init_tradeday()

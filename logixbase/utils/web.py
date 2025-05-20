@@ -1,3 +1,5 @@
+import warnings
+warnings.filterwarnings("ignore")
 import paramiko
 import smtplib
 import os
@@ -7,6 +9,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 
+from .schema import MailConfig
 
 os.environ["NLS_LANG"] = "AMERICAN_AMERICA.AL32UTF8"
 
@@ -104,7 +107,7 @@ class SSHConnection(object):
 def send_mail_file(subject: str,
                    input_data: tuple,
                    mailto: list,
-                   mail_setting: dict):
+                   mail_setting: MailConfig):
     """
     发送包含附件的邮件。
 
@@ -127,10 +130,10 @@ def send_mail_file(subject: str,
     """
     text, files = input_data
 
-    mail_host = mail_setting["host"]
-    mail_user = mail_setting["username"]
-    mail_pass = mail_setting["password"]
-    mail_name = mail_setting["mailname"]
+    mail_host = mail_setting.host
+    mail_user = mail_setting.username
+    mail_pass = mail_setting.password
+    mail_name = mail_setting.mail_name
     assert type(files) == list
 
     msg = MIMEMultipart()
@@ -172,7 +175,7 @@ def send_mail_file(subject: str,
 def send_email_text(subject: str,
                     content: str,
                     mailto: list,
-                    mail_setting: dict):
+                    mail_setting: MailConfig):
     """
     发送文本邮件的函数。
 
@@ -180,7 +183,7 @@ def send_email_text(subject: str,
         subject (str): 邮件的主题。
         content (str): 邮件的正文内容。
         mailto (list): 接收邮件的邮箱地址列表。
-        mail_setting (dict): 邮件设置，包含主机名、用户名、密码和发件人名称。
+        mail_setting (MailConfig): 邮件设置，包含主机名、用户名、密码和发件人名称。
 
     Returns:
         bool: 如果邮件发送成功，返回 True；如果发送失败，返回 False。
@@ -188,10 +191,10 @@ def send_email_text(subject: str,
     Raises:
         无。
     """
-    mail_host = mail_setting["host"]
-    mail_user = mail_setting["username"]
-    mail_pass = mail_setting["password"]
-    mail_name = mail_setting["mailname"]
+    mail_host = mail_setting.host
+    mail_user = mail_setting.username
+    mail_pass = mail_setting.password
+    mail_name = mail_setting.mail_name
 
     mail_sender = "<" + mail_name + ">"
     # msg = MIMEText(content,_subtype="plain",_charset="gb2312")

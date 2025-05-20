@@ -11,7 +11,7 @@ from ..protocol import FeederProtocol as FDP, IdentityProtocol as IDP
 class BaseFeeder(FDP, IDP):
 
     def __init__(self, name: str, config, logger = None):
-        self._conn_cfg = config
+        self.conn_cfg = config
         self._logger = logger
 
         self._name: str = name
@@ -21,13 +21,13 @@ class BaseFeeder(FDP, IDP):
         if self._logger is not None:
             self._logger.INFO(msg)
         else:
-            print(f"[{self._name}Feeder] [INFO] {msg}]")
+            print(f"[{self._name}Feeder] [INFO] {msg}")
 
     def ERROR(self, msg: str):
         if self._logger is not None:
             self._logger.ERROR(msg)
         else:
-            print(f"[{self._name}Feeder] [ERROR] {msg}]")
+            print(f"[{self._name}Feeder] [ERROR] {msg}")
 
     def get_id(self):
         return f"{self._name}:{self._uuid}"

@@ -12,28 +12,6 @@ if /I "%PROJECT_VERSION%"=="VERSION_NOT_FOUND" (
 )
 echo [INFO] Project version detected: v%PROJECT_VERSION%
 
-:: === Step 2: Git commit & push to master ===
-echo [INFO] Committing changes to Git...
-git add .
-git commit -m "Auto build and release: v%PROJECT_VERSION%"
-git push origin HEAD:master
-if %errorlevel% neq 0 (
-    echo [ERROR] Git push to master failed!
-    exit /b %errorlevel%
-)
-echo.
-
-:: === Step 3: Create version branch (vX.Y.Z) ===
-echo [INFO] Creating version branch v%PROJECT_VERSION%...
-git branch v%PROJECT_VERSION% 2>nul
-git checkout v%PROJECT_VERSION%
-git push origin v%PROJECT_VERSION%
-if %errorlevel% neq 0 (
-    echo [WARNING] Failed to push version branch. It may already exist.
-)
-git checkout master
-echo.
-
 :: === Step 4: Check if version exists on PyPI ===
 echo [INFO] Checking PyPI for existing version...
 python -c "import requests, sys; resp = requests.get(f'https://pypi.org/pypi/logixbase/json'); versions = resp.json().get('releases', {}); sys.exit(0 if '%PROJECT_VERSION%' not in versions else 1)"

@@ -5,6 +5,10 @@ include pyproject.toml
 # 包含可能的数据文件
 recursive-include logixbase *.yaml *.json *.yml *.ini *.toml
 include logixbase/py.typed
+recursive-include logixbase/feeder/config *
+recursive-include logixbase/feeder/sql *
+recursive-include logixbase/gateway/api *
+recursive-include logixbase/logger/dashboard *
 
 # 排除不必要的文件
 global-exclude *.py[cod] __pycache__ *.so

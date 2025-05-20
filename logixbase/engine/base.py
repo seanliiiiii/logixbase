@@ -3,7 +3,7 @@ import sys
 import signal
 import traceback
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Union, Type
+from typing import Dict, Any, Union
 from pathlib import Path
 
 from .constant import Status
@@ -14,6 +14,7 @@ from ..logger.core import LogManager
 from ..executor import MultiTaskExecutor
 from ..plugin.manager import PluginManager
 from ..plugin.base import BasePlugin
+from ..utils import send_email_text
 
 
 class BaseEngine(ABC):
@@ -32,7 +33,9 @@ class BaseEngine(ABC):
         self.plugin_manager = PluginManager(self)  # 使用PluginManager替代plugins列表
         self.components = {}  # 组件字典
 
-        self.status = Status.INIT  # 引擎状态
+        self.mails: dict = {}               # 记录邮件的字典
+
+        self.status = Status.INIT           # 引擎状态
         self._register_signal_handlers()
         self._initialized = False
 
@@ -43,31 +46,31 @@ class BaseEngine(ABC):
         if self.logger is not None:
             self.logger.INFO(msg)
         else:
-            print(f"[{self.__name__}] [INFO] {msg}]")
+            print(f"[{self.__name__}] [INFO] {msg}")
 
     def ERROR(self, msg: str):
         if self.logger is not None:
             self.logger.ERROR(msg)
         else:
-            print(f"[{self.__name__}] [ERROR] {msg}]")
+            print(f"[{self.__name__}] [ERROR] {msg}")
 
     def DEBUG(self, msg: str):
         if self.logger is not None:
             self.logger.DEBUG(msg)
         else:
-            print(f"[{self.__name__}] [DEBUG] {msg}]")
+            print(f"[{self.__name__}] [DEBUG] {msg}")
 
     def WARNING(self, msg: str):
         if self.logger is not None:
             self.logger.WARNING(msg)
         else:
-            print(f"[{self.__name__}] [WARNING] {msg}]")
+            print(f"[{self.__name__}] [WARNING] {msg}")
 
     def CRITICAL(self, msg: str):
         if self.logger is not None:
             self.logger.CRITICAL(msg)
         else:
-            print(f"[{self.__name__}] [CRITICAL] {msg}]")
+            print(f"[{self.__name__}] [CRITICAL] {msg}")
 
     def on_init(self):
         """初始化：配置解析、任务注册、资源准备"""
@@ -86,10 +89,10 @@ class BaseEngine(ABC):
         """收尾清理操作"""
         # 停止所有插件
         self.plugin_manager.stop_all()
-        
+
         if hasattr(self.executor, "join"):
             self.executor.join()
-        
+
         # 停止所有组件
         for component_id, component in self.components.items():
             try:
@@ -102,7 +105,9 @@ class BaseEngine(ABC):
         """退出处理：资源释放、日志关闭等"""
         # 退出所有插件
         self.plugin_manager.exit_all()
-        self.status = Status.EXITED
+        self.STATUS("EXITED")
+        # 发送邮件通知
+        self.mail_notification()
 
     def on_exception(self, exc):
         """异常处理：可扩展到报警等"""
@@ -112,7 +117,7 @@ class BaseEngine(ABC):
                 plugin.on_exception(exc)
             except Exception as e:
                 self.logger.ERROR(f"插件 '{plugin_id}' 异常处理器中出错: {e}")
-        self.status = Status.ERROR
+        self.STATUS("ERROR")
 
     def setup_configer(self):
         """初始化配置管理器"""
@@ -155,7 +160,7 @@ class BaseEngine(ABC):
         self.components[component.get_id()] = component
         self.logger.INFO(f"组件 {component.get_name()} 已注册")
         return component
-        
+
     def start_component(self, component_id):
         """启动组件"""
         if component_id in self.components:
@@ -168,7 +173,7 @@ class BaseEngine(ABC):
         else:
             self.logger.WARNING(f"未找到组件 {component_id}")
         return False
-        
+
     def stop_component(self, component_id):
         """停止组件"""
         if component_id in self.components:
@@ -181,7 +186,7 @@ class BaseEngine(ABC):
         else:
             self.logger.WARNING(f"未找到组件 {component_id}")
         return False
-            
+
     def get_component_status(self, component_id=None):
         """获取组件状态"""
         if component_id:
@@ -212,22 +217,22 @@ class BaseEngine(ABC):
     def run(self):
         try:
             self.logger.INFO("引擎初始化中...")
-            self.status = Status.INITIALIZING
+            self.STATUS("INITIALIZING")
             self.on_init()
             self._initialized = True
 
             self.logger.INFO("引擎启动中...")
-            self.status = Status.RUNNING
+            self.STATUS("RUNNING")
             self.on_start()
 
             self.logger.INFO("引擎执行完毕。")
-            self.status = Status.STOPPED
+            self.STATUS("STOPPED")
             self.on_stop()
 
         except Exception as e:
             self.logger.ERROR("引擎运行期间发生未处理的异常")
             self.logger.ERROR(traceback.format_exc())
-            self.status = Status.ERROR
+            self.STATUS("ERROR")
             self.on_exception(e)
         finally:
             self.on_exit()
@@ -241,6 +246,24 @@ class BaseEngine(ABC):
         self.executor.start()
         self.logger.start()
 
+    def add_mail(self, subject: str, content: str, mail_to: list):
+        """向消息管理器注册待发送邮件"""
+        mail_id = max(self.mails) + 1 if self.mails else 1
+        self.mails[mail_id] = (subject, content, mail_to)
+
+    def mail_notification(self):
+        """统一发送邮件"""
+        if not self.mails:
+            return
+        sent = 0
+        for mail_id, mail in self.mails.items():
+            subject, content, mail_to = mail
+            try:
+                sent += int(send_email_text(subject, content, mail_to, self.config.mail))
+            except Exception as e:
+                self.ERROR(f"邮件发送失败: {subject}, {content}, {e}")
+        self.INFO(f"邮件发送成功：总计{sent}，失败: {int(len(self.mails)) - sent}")
+
 
 class BaseComponent(OperationProtocol):
     """
@@ -250,7 +273,7 @@ class BaseComponent(OperationProtocol):
     def __init__(self, name: str = None, **kwargs):
         """
         初始化组件
-        
+
         Args:
             component_id: 组件唯一标识符
             name: 组件名称，默认为类名
@@ -270,46 +293,49 @@ class BaseComponent(OperationProtocol):
     def get_id(self) -> str:
         return f"{self._name}:{self._uuid}"
 
+    def STATUS(self, status: str):
+        self.status = Status(status.upper())
+
     def INFO(self, msg: str):
         if self.logger is not None:
             self.logger.INFO(msg)
         else:
-            print(f"[{self._name}] [INFO] {msg}]")
+            print(f"[{self._name}] [INFO] {msg}")
 
     def ERROR(self, msg: str):
         if self.logger is not None:
             self.logger.ERROR(msg)
         else:
-            print(f"[{self._name}] [ERROR] {msg}]")
+            print(f"[{self._name}] [ERROR] {msg}")
 
     def DEBUG(self, msg: str):
         if self.logger is not None:
             self.logger.DEBUG(msg)
         else:
-            print(f"[{self._name}] [DEBUG] {msg}]")
+            print(f"[{self._name}] [DEBUG] {msg}")
 
     def WARNING(self, msg: str):
         if self.logger is not None:
             self.logger.WARNING(msg)
         else:
-            print(f"[{self._name}] [WARNING] {msg}]")
+            print(f"[{self._name}] [WARNING] {msg}")
 
     def CRITICAL(self, msg: str):
         if self.logger is not None:
             self.logger.CRITICAL(msg)
         else:
-            print(f"[{self._name}] [CRITICAL] {msg}]")
+            print(f"[{self._name}] [CRITICAL] {msg}")
 
     def bind(self, engine):
         """
         将组件绑定到引擎
-        
+
         Args:
             engine: 引擎实例
         """
         self.engine = engine
         self.logger = getattr(engine, 'logger', None)
-        
+
     def start(self):
         """
         启动组件
@@ -318,20 +344,20 @@ class BaseComponent(OperationProtocol):
             if self.logger:
                 self.logger.WARNING(f"组件{self._name}已启动或已报错: {self.status}")
             return False
-            
+
         try:
-            self.status = Status.INITIALIZING
+            self.STATUS("INITIALIZING")
             self._execute()
-            self.status = Status.RUNNING
+            self.STATUS("RUNNING")
             if self.logger:
                 self.logger.INFO(f"组件{self._name}已启动")
             return True
         except Exception as e:
-            self.status = Status.ERROR
+            self.STATUS("ERROR")
             if self.logger:
                 self.logger.ERROR(f"组件{self._name}启动失败: {str(e)}")
             raise
-        
+
     def stop(self):
         """
         停止组件
@@ -340,27 +366,27 @@ class BaseComponent(OperationProtocol):
             if self.logger:
                 self.logger.WARNING(f"组件{self._name}已停止: {self.status}")
             return False
-            
+
         try:
-            self.status = Status.STOPPING
+            self.STATUS("STOPPING")
             self._stop_execution()
-            self.status = Status.STOPPED
+            self.STATUS("STOPPED")
             if self.logger:
                 self.logger.INFO(f"组件{self._name}成功终止")
             return True
         except Exception as e:
-            self.status = Status.ERROR
+            self.STATUS("ERROR")
             if self.logger:
                 self.logger.ERROR(f"组件{self._name}终止失败: {str(e)}")
             raise
-        
+
     def join(self, timeout=None):
         """
         等待组件执行完成
-        
+
         Args:
             timeout: 超时时间，如果为None则无限等待
-        
+
         Returns:
             是否成功等待
         """
@@ -369,11 +395,11 @@ class BaseComponent(OperationProtocol):
                 self._thread.join(timeout)
                 return not self._thread.is_alive()
         return True
-            
+
     def get_status(self) -> Dict[str, Any]:
         """
         获取组件状态
-        
+
         Returns:
             包含组件状态信息的字典
         """
@@ -397,6 +423,6 @@ class BaseComponent(OperationProtocol):
         停止组件逻辑，由子类实现
         """
         pass
-        
+
     def __repr__(self):
         return f"<{self.__class__.__name__}(id='{self._uuid}', name='{self._name}', status='{self.status}')>"

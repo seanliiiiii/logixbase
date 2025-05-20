@@ -29,13 +29,13 @@ class BaseGateway(GTP, IDP):
         if self.logger is not None:
             self.logger.INFO(msg)
         else:
-            print(f"[{self._name}Gateway] [INFO] {msg}]")
+            print(f"[{self._name}Gateway] [INFO] {msg}")
 
     def ERROR(self, msg: str):
         if self.logger is not None:
             self.logger.ERROR(msg)
         else:
-            print(f"[{self._name}Gateway] [ERROR] {msg}]")
+            print(f"[{self._name}Gateway] [ERROR] {msg}")
 
     @staticmethod
     def format_front(fronts) -> list:

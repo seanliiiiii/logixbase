@@ -28,13 +28,13 @@ class HotReloader(OPP):
         if self._logger is not None:
             self._logger.INFO(msg)
         else:
-            print(f"[HotReload] [INFO] {msg}]")
+            print(f"[HotReload] [INFO] {msg}")
 
     def ERROR(self, msg: str):
         if self._logger is not None:
             self._logger.ERROR(msg)
         else:
-            print(f"[HotReload] [ERROR] {msg}]")
+            print(f"[HotReload] [ERROR] {msg}")
 
     def register_callback(self, callback):
         self._callbacks.append(callback)

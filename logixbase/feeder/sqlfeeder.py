@@ -37,7 +37,7 @@ class SqlServerFeeder(BaseFeeder):
         self._edb = cfg["edb"]["map"]
 
     def connect(self):
-        self._api = DealWithSql(self._conn_cfg)
+        self._api = DealWithSql(self.conn_cfg)
         self._api.connect()
 
     def disconnect(self):
@@ -47,6 +47,12 @@ class SqlServerFeeder(BaseFeeder):
     def check_login_status(self):
         if not self._api.check_connect():
             pass
+
+    def create_table(self, asset: str, file: Union[list, tuple], context: dict = None):
+        """创建数据库表格"""
+        for file_ in file:
+            file_dir = Path(__file__).parent.joinpath("sql", asset.lower(), f"{file_.lower().rstrip('.sql')}.sql")
+            self._api.execute_sqlfile(file_dir, context)
 
     def _check_db_exist(self, db: str, table: str = None, schema: str = "dbo"):
         query = f"SELECT 1 FROM master.sys.databases WHERE name = '{db}'"
@@ -149,7 +155,7 @@ class SqlServerFeeder(BaseFeeder):
         else:
             raise NotImplementedError(f"未能找到{n}个交易日的数据")
 
-    def trade_time(self, asset: str, ticker: Union[list, tuple], call_auction: bool = True):
+    def trade_time(self, asset: str, ticker: Union[list, tuple] = None, call_auction: bool = True):
         """
         从数据库中获取交易时间数据。
         Args:
@@ -159,14 +165,14 @@ class SqlServerFeeder(BaseFeeder):
         Returns:
             dict: 返回一个字典，键为合同名称，值为包含每个市场交易时间的字典。
         """
-        product = [k.split(".")[1].upper() if int(len(k.split("."))) > 1 else k for k in ticker]
         # SQL查询语句，用于从数据库中获取交易时间数据
         query = f"""
                 SELECT [Product], [Day], [Night]
                 FROM [{asset.upper()}_RESEARCH_DAILY].[dbo].[AssetTradeTime_UTCGMT8]
                 """
         # 如果传入了contract参数，则在SQL查询语句中添加WHERE子句，限定合同范围
-        if product is not None:
+        if ticker is not None:
+            product = [k.split(".")[1].upper() if int(len(k.split("."))) > 1 else k for k in ticker]
             query += f" WHERE [Product] in ({str([k.upper().split('_')[0] for k in product])[1:-1]})"""
 
         # 执行SQL查询，并将结果转换为字典格式
@@ -560,7 +566,7 @@ class SqlServerFeeder(BaseFeeder):
         quote = func(*arg, ticker).dropna(subset=["DateTime"])
         self.INFO(f"{asset.capitalize()}资产{interval.value}行情数据获取完成: {int(len(quote))}条记录")
 
-        quote = quote.drop_duplicates(subset=["DateTime", "Ticker"])
+        quote = quote.drop_duplicates(subset=["DateTime", "Instrument"])
         if use_schema:
             quote = self.create_bar_schema(asset, interval.value, quote)
 

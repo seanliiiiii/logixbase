@@ -231,9 +231,11 @@ class DealWithSql(DatabaseConnector, DatabaseExecutor):
                 insert_temp = data[i:i + insert_lim]
                 cur.executemany(sql, insert_temp)
             self.conna.commit()
+            return True
         except pymssql.Error as e:
             print(f"SqlServer数据库批量插入失败: {e}")
             self.conna.rollback()
+            return False
 
     def exec_insert(self, sql: str, data: tuple):
         """
@@ -258,9 +260,11 @@ class DealWithSql(DatabaseConnector, DatabaseExecutor):
         try:
             cur.execute(sql, data)
             self.conna.commit()
+            return True
         except pymssql.Error as e:
             print(f"SqlServer数据库插入失败: {e}")
             self.conna.rollback()
+            return False
 
     def exec_nonquery(self, sql: str):
         """
@@ -285,16 +289,18 @@ class DealWithSql(DatabaseConnector, DatabaseExecutor):
         try:
             cur.execute(sql)
             self.conna.commit()
+            return True
         except pymssql.Error as e:
             print(f"SqlServer数据库查询失败: {e}")
             self.conna.rollback()
+            return False
 
     def execute_sqlfile(self, file: [Path, str], context: dict = None):
         cur = self.__get_cur()
         if not Path(file).suffix.lower() == ".sql":
             print("当前文件不是.sql文件")
             return
-
+        res = False
         with open(file, 'r', encoding='utf-8') as f:
             sql = f.read()
 
@@ -304,14 +310,18 @@ class DealWithSql(DatabaseConnector, DatabaseExecutor):
                 cur.execute(sql)
                 self.conna.commit()
                 print(f"{file}成功执行.")
+                res = True
             except Exception as e:
-                print(f"Error in {file}: {e}")
-
+                print(f"{file}执行失败: {e}")
+        return res
 
     def batch_execute_sqlfile(self, directory: [Path, str], context: dict = None):
+        res = True
         for filename in os.listdir(directory):
             if filename.endswith('.sql'):
-                self.execute_sqlfile(Path(directory).joinpath(filename), context)
+                res_ = self.execute_sqlfile(Path(directory).joinpath(filename), context)
+                res = res and res_
+        return res
 
 
 class DealWithOracle:

@@ -86,24 +86,24 @@ class TinysoftFeeder(BaseFeeder):
 
     def connect(self):
         """Create Tinysoft connection"""
-        self._tsl = load_module_from_file(Path(self._conn_cfg.path).joinpath("TSLPy3.pyd"))
+        self._tsl = load_module_from_file(Path(self.conn_cfg.path).joinpath("TSLPy3.pyd"))
         # Try to connect to tinysoft
         status = False
         i = 1
         while i < (self._max_iter + 1):
-            self._tsl.ConnectServer(self._conn_cfg.host, self._conn_cfg.port)
-            self._tsl.LoginServer(self._conn_cfg.username, self._conn_cfg.password)
+            self._tsl.ConnectServer(self.conn_cfg.host, self.conn_cfg.port)
+            self._tsl.LoginServer(self.conn_cfg.username, self.conn_cfg.password)
 
             status = self.is_connected
             if status:
-                self.INFO(f"天软连接成功：尝试{i}次，用户名{self._conn_cfg.username}")
+                self.INFO(f"天软连接成功：尝试{i}次，用户名{self.conn_cfg.username}")
                 break
             else:
                 time.sleep(self._heartbeat)
                 i += 1
                 # Return connection result
         if not status:
-            self.ERROR(f"天软连接失败：用户名{self._conn_cfg.username} failed...")
+            self.ERROR(f"天软连接失败：用户名{self.conn_cfg.username} failed...")
             return False
 
         return status
@@ -112,12 +112,12 @@ class TinysoftFeeder(BaseFeeder):
         """Disconnect tinysoft connection"""
         self._tsl.Disconnect()
         if not self.is_connected():
-            self.INFO(f"天软连接已断开：用户名{self._conn_cfg.username}")
+            self.INFO(f"天软连接已断开：用户名{self.conn_cfg.username}")
 
     def check_connect(self):
         """Check login status and ensure connection"""
         if not self.is_connected:
-            self.INFO(f"天软连接已断开，尝试重新连接: 用户名{self._conn_cfg.username}")
+            self.INFO(f"天软连接已断开，尝试重新连接: 用户名{self.conn_cfg.username}")
             self.connect()
 
     def exec_query(self, query: str, msg: str = ""):
@@ -225,8 +225,8 @@ class TinysoftFeeder(BaseFeeder):
     def future_info_basic(self):
         """Get all basic information of domestic future contracts in history"""
         self.check_connect()
-        cols = ["Ticker", "Contract", "ListDate", "DelistDate", "DeliverDate", "Multiplier", "TickSize",
-                "Exchange", "MinMargin", "PriceLimit", "QuoteUnit", "MultiplierUnit", "FutureClass", "ComFutureClass"]
+        cols = ["Ticker", "Product", "ListDate", "DelistDate", "DeliverDate", "Multiplier", "PriceTick",
+                "Exchange", "MinMargin", "PriceLimit", "QuoteUnit", "MultiplierUnit", "ClassLevel1", "ClassLevel2"]
         # Query data from Tinysoft
         use_table = self._use_table["future"]
         query = f"""
@@ -260,8 +260,8 @@ class TinysoftFeeder(BaseFeeder):
             basic_info = basic_info[~((basic_info["ListDate"] == 0) & (basic_info["DelistDate"] == 0))]
             # Data map
             basic_info.loc[:, "Exchange"] = basic_info.loc[:, "Exchange"].map(self._exchange_map)
-            basic_info.loc[:, "FutureClass"] = basic_info.loc[:, "FutureClass"].map(self._future["class"])
-            basic_info.loc[:, "ComFutureClass"] = basic_info.loc[:, "ComFutureClass"].map(self._future["class"])
+            basic_info.loc[:, "ClassLevel1"] = basic_info.loc[:, "ClassLevel1"].map(self._future["class"])
+            basic_info.loc[:, "ClassLevel2"] = basic_info.loc[:, "ClassLevel2"].map(self._future["class"])
             # Deal with missing datetime data
             for tag in ["ListDate", "DelistDate"]:
                 mask = basic_info[tag] == 0
@@ -327,10 +327,9 @@ class TinysoftFeeder(BaseFeeder):
     def stock_info_basic(self):
         """Get all basic information of domestic stocks in history"""
         self.check_connect()
-        cols = ["Ticker", "Code", "RegisteredCapital", "Representative", "EstablishDate", "ListDate", "Exchange",
-                "Board",
-                "TotalShares", "TotalTradeableShares", "MainBusiness", "Status", "ShenwanIndustryLevel1",
-                "ShenwanIndustryLevel2", "ShenwanIndustryLevel3"]
+        cols = ["Ticker", "Name", "RegisteredCapital", "Representative", "EstablishDate", "ListDate", "Exchange",
+                "Board", "TotalShares", "TotalTradeableShares", "MainBusiness", "Status", "SWClassLevel1",
+                "SWClassLevel2", "SWClassLevel3"]
         # Query data from Tinysoft
         use_table = self._use_table["stock"]
         query = f"""
@@ -382,8 +381,8 @@ class TinysoftFeeder(BaseFeeder):
     def etf_info_basic(self):
         """Get all basic information of domestic ETFs in history"""
         self.check_connect()
-        cols = ["Ticker", "Code", "EstablishDate", "ListDate", "Exchange", "Style", "Target", "TotalIssuedShares",
-                "BenchMark", "TradeSymbol"]
+        cols = ["Ticker", "Name", "EstablishDate", "ListDate", "Exchange", "Style", "Target", "TotalIssuedShares",
+                "BenchMark", "TradeInstrument"]
         # Query data from Tinysoft
         use_table = self._use_table["etf_info"]
         query = f"""
@@ -427,7 +426,7 @@ class TinysoftFeeder(BaseFeeder):
     def index_info_basic(self):
         """Get all basic information of domestic ETFs in history"""
         self.check_connect()
-        cols = ["Ticker", "Code", "Exchange", "EstablishDate", "ListDate", "BeginPoint", "SampleSize", "IndexClassL1",
+        cols = ["Ticker", "Name", "Exchange", "EstablishDate", "ListDate", "BeginPoint", "SampleSize", "IndexClassL1",
                 "IndexClassL2", "IndexClassL3"]
         # Query data from Tinysoft
         use_table = self._use_table["index"]
@@ -456,7 +455,7 @@ class TinysoftFeeder(BaseFeeder):
             basic_info = self._decode_data(basic_info)
             basic_info = basic_info[~basic_info['Ticker'].str.contains('CNY|USD|HKD|GBP|EUR')]
             basic_info = basic_info[
-                ~basic_info.loc[:, 'Code'].str.contains('人民币|美元|港元|欧元|英镑|HK|香港|U$|CNY|USD|HKD|GBP|EUR|AUD')]
+                ~basic_info.loc[:, 'Name'].str.contains('人民币|美元|港元|欧元|英镑|HK|香港|U$|CNY|USD|HKD|GBP|EUR|AUD')]
             basic_info = basic_info[basic_info.loc[:, 'IndexClassL2'].isin(['综合指数', '规模指数']) |
                                     (basic_info.loc[:, 'IndexClassL3'].isin(['一级行业指数', '二级行业指数']) &
                                      basic_info.loc[:, 'Ticker'].str.contains('SW'))]
@@ -481,7 +480,7 @@ class TinysoftFeeder(BaseFeeder):
     def option_info_basic(self, date):
         self.check_connect()
         cols = ["TradeDay", "Ticker", "Underlying", "UnderlyingClass", "ExerciseType", "CallorPut", "Multiplier",
-                "Strike", "ListDate", "DelistDate", "ExpiryDate", "TickSize", "Exchange"]
+                "Strike", "ListDate", "DelistDate", "ExpiryDate", "PriceTick", "Exchange"]
 
         date = unify_time(date, mode=3)
         basic_info = pd.DataFrame()
@@ -506,8 +505,8 @@ class TinysoftFeeder(BaseFeeder):
                 info_.loc[:, "CallorPut"] = info_.loc[:, "CallorPut"].map(self._option["direction_type"])
                 info_.loc[:, "UnderlyingClass"] = info_.loc[:, "UnderlyingClass"].map(self._option["class"])
                 info_["TradeDay"] = date
-                # There is no TickSize from SZSE, so set it to 0.0001
-                info_["TickSize"].loc[info_["Exchange"] == "SZSE"] = 0.0001
+                # There is no PriceTick from SZSE, so set it to 0.0001
+                info_["PriceTick"].loc[info_["Exchange"] == "SZSE"] = 0.0001
                 # Deal with missing datetime data
                 for tag in ["ListDate", "DelistDate"]:
                     mask = info_[tag] == 0

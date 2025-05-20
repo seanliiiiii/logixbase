@@ -37,8 +37,8 @@ class TqsdkFeeder(BaseFeeder):
         """Start api"""
         try:
             from tqsdk import TqApi, TqAuth
-            self._api = TqApi(auth=TqAuth(self._conn_cfg.username, self._conn_cfg.password), disable_print=True)
-            self.INFO(f"天勤API连接成功: 用户{self._conn_cfg.username}")
+            self._api = TqApi(auth=TqAuth(self.conn_cfg.username, self.conn_cfg.password), disable_print=True)
+            self.INFO(f"天勤API连接成功: 用户{self.conn_cfg.username}")
         except Exception as e:
             self.ERROR(f"天勤API连接失败: {e}")
 

@@ -15,21 +15,21 @@ table:
 
 column:
   StockID: Ticker
-  StockName: Code
-  名称: Code
+  StockName: Name
+  名称: Name
   代码: Ticker
-  交易代码(末值): Contract
+  交易代码(末值): Product
   变动日(初值): ListDate
   最后交易日(末值): DelistDate
   最后交割日(末值): DeliverDate
   合约乘数(末值): Multiplier
-  最小变动价位(末值): TickSize
+  最小变动价位(末值): PriceTick
   最低交易保证金(%%)(末值): MinMargin
   涨跌停板幅度(%%)(末值): PriceLimit
   报价单位(末值): QuoteUnit
   合约乘数单位(末值): MultiplierUnit
-  期货类别(末值): FutureClass
-  商品期货类别(末值): ComFutureClass
+  期货类别(末值): ClassLevel1
+  商品期货类别(末值): ClassLevel2
   上市地(末值): Exchange
   截止日: ExecDate
   投机买保证金率(%): LongMargin
@@ -61,20 +61,20 @@ column:
   流通A股: TotalTradeableShares
   主营业务: MainBusiness
   当前状态: Status
-  申万一级行业代码: ShenwanIndustryLevel1
-  申万二级行业代码: ShenwanIndustryLevel2
-  申万三级行业代码: ShenwanIndustryLevel3
+  申万一级行业代码: SWClassLevel1
+  申万二级行业代码: SWClassLevel2
+  申万三级行业代码: SWClassLevel3
   投资风格: Style
   投资目标: Target
   募集总份额: TotalIssuedShares
   标的指数代码: BenchMark
-  一级市场代码: TradeSymbol
+  一级市场代码: TradeInstrument
   指数起始点: BeginPoint
   样本个数: SampleSize
   指数类型: IndexClassL1
   指数类型2: IndexClassL2
   指数类型3: IndexClassL3
-  合约交易代码: Contract
+  合约交易代码: Product
   合约简称: Name
   标的证券代码: Underlying
   标的证券名称: UnderlyingName
@@ -87,7 +87,7 @@ column:
   最后交易日: DelistDate
   行权交割日: DeliverDate
   到期日: ExpiryDate
-  最小报价单位: TickSize
+  最小报价单位: PriceTick
   上市地: Exchange
   行权日: ExerciseDate
   合约未平仓数: OpenInterest
@@ -117,25 +117,27 @@ column:
 
 decode:
   Contract: utf8
+  Product: utf8
   Date: utf8
   TradeDay: utf8
   DateTime: utf8
+  Name: gbk
   Code: gbk
   Ticker: utf8
   BondCode: utf8
   QuoteUnit: gbk
   MultiplierUnit: gbk
-  FutureClass: gbk
-  ComFutureClass: gbk
+  ClassLevel1: gbk
+  ClassLevel2: gbk
   Representative: gbk
   Exchange: gbk
   MainBusiness: gbk
   Status: gbk
-  ShenwanIndustryLevel3: utf8
+  SWClassLevel3: utf8
   Board: gbk
-  ShenwanIndustryLevel2: utf8
-  ShenwanIndustryLevel1: utf8
-  TradeSymbol: utf8
+  SWClassLevel2: utf8
+  SWClassLevel1: utf8
+  TradeInstrument: utf8
   Style: gbk
   BenchMark: utf8
   Target: gbk

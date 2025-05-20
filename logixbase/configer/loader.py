@@ -103,7 +103,6 @@ class ConfigLoader(OPP, LDP, IDP):
                 return v
         if module_name.lower() in self._registry_schema:
             return self._registry_schema[module_name.lower()]
-        print(f"未在 {self.schema_cls.__name__} 中声明模块，且未注册: {module_name}")
         return None
 
     def set_config_path(self, config_path: Union[Path, str]):
@@ -158,6 +157,7 @@ class ConfigLoader(OPP, LDP, IDP):
         schema_data = {}
         # 遍历module_config_data中的每个模块配置数据
         for module, config_dict in module_config_data.items():
+            module = config_dict.get("spec", module)
             # 查找对应模块的schema类
             schema_class = self._find_schema_class(module)
             if schema_class is None:
@@ -170,10 +170,6 @@ class ConfigLoader(OPP, LDP, IDP):
         required_modules = [k.lower() for k in get_type_hints(self.schema_cls).keys()]
         # 找出schema_data中缺失的模块
         missing = [m for m in required_modules if m not in schema_data]
-        # 如果存在缺失的模块，则抛出异常
-        if missing:
-            raise ValueError(f"以下配置模块缺失: {missing}")
-
         # 使用schema_data中的数据实例化schema_cls
         instance = self.schema_cls(**schema_data)
         # 将实例设置到代理对象中
@@ -350,7 +346,7 @@ def load_schema(config_path: Union[Path, str], schema: Type[BaseModel], spec: st
     cfg_dict = {k.lower(): i for k, i in cfg_dict.items()}
 
     if spec:
-        create_schema(cfg_dict[spec.lower()], schema)
+        return create_schema(cfg_dict[spec.lower()], schema)
     elif schema.__name__.lower() in cfg_dict:
         return create_schema(cfg_dict[schema.__name__.lower()], schema)
     else:
@@ -458,8 +454,7 @@ def merge_dicts(base: dict, override: dict) -> dict:
 
 
 def normalize_value(value, expected_type, field_name=""):
-    try:
-        """
+    """
     对输入的值进行类型校验和标准化处理。
 
     Args:
@@ -474,6 +469,7 @@ def normalize_value(value, expected_type, field_name=""):
         ValueError: 如果值的类型不符合期望的类型或转换过程中发生错误，则引发此异常。
 
     """
+    try:
         if expected_type == bool:
             if str(value).lower() in ["1", "true"]:
                 return True
@@ -486,7 +482,10 @@ def normalize_value(value, expected_type, field_name=""):
         elif expected_type == float:
             return float(str(value).replace(",", ""))
         elif expected_type == str:
-            return str(value).strip().replace("%", "%%")
+            value = str(value).strip().replace("%", "%%")
+            if all([i.isdigit() for i in value.split("e")]):
+                value = eval(value)
+            return value
         elif expected_type == dict:
             value = eval(value) if not isinstance(value, dict) else value
             return {k.strip(): v for k, v in value.items()}

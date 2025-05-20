@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "logixbase"
-version = "0.1.0"
 description = "高度模块化的量化交易策略开发框架"
 readme = "README.md"
 requires-python = ">=3.9"
+dynamic = ["version"]
 license = {text = "MIT License"}
 authors = [
     {name = "LogixBase开发团队", email = "trader@logixquant.com"}
@@ -79,7 +79,11 @@ dev = [
 include-package-data = true
 
 [tool.setuptools.package-data]
-logixbase = ["*.yaml", "*.yml", "*.ini", "*.json", "*.toml", "py.typed"]
+logixbase = ["*.yaml", "*.yml", "*.ini", "*.json", "*.toml", "py.typed",
+    "feeder/config/*",
+    "feeder/sql/*",
+    "gateway/api/*",
+    "logger/dashboard/*"]
 
 [tool.setuptools.packages.find]
 where = ["."]

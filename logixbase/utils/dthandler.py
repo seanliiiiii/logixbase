@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from typing import Union
 import pandas as pd
 import pandas_market_calendars as mcal
@@ -126,6 +126,8 @@ def unify_time(daytime, fmt: str = "datetime",  mode: int = 7, pattern: str = No
     if isinstance(daytime, datetime) or isinstance(daytime, pd.Timestamp):
         dt_parts = (daytime.year, daytime.month, daytime.day, daytime.hour, daytime.minute,
                     daytime.second, daytime.microsecond)
+    elif isinstance(daytime, date):
+        dt_parts = (daytime.year, daytime.month, daytime.day, 0, 0, 0, 0)
     elif isinstance(daytime, int):
         dt_str = str(daytime)
         dt_len = int(len(dt_str))
