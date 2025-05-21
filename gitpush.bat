@@ -1,72 +1,95 @@
-```batch
 @echo off
 setlocal EnableDelayedExpansion
 chcp 65001>nul
 
 REM ------------------------------------------------------------------------
-REM Release Script: version-based branch creation and Git merge
-REM Save this file as "release.bat" (NOT git.bat) in your repository root.
-REM It must not shadow the 'git' command. Double-click to run.
-REM Assumes:
-REM   • Git repo is at this level (script parent folder).
-REM   • Project package is in subfolder named same as this folder.
-REM Requirements: Windows, Git.exe in PATH.
+REM gitpush.bat —— 一键提交 & 推送（确保本地改动不丢失、不被覆盖）
 REM ------------------------------------------------------------------------
 
-REM --- Change to script directory ---
+REM 1. 进入脚本所在目录
 pushd "%~dp0"
 set "SCRIPT_DIR=%CD%"
-echo Script directory: %SCRIPT_DIR%
+echo [INFO] Script directory: %SCRIPT_DIR%
 
-REM --- Derive project/package folder name ---
+REM 2. 获取项目名（当前文件夹名）
 for %%F in ("%SCRIPT_DIR%") do set "PROJECT_NAME=%%~nF"
-echo Project name: %PROJECT_NAME%
+echo [INFO] Project name: %PROJECT_NAME%
 
-REM --- Locate __init__.py and extract __version__ ---
-set "PACKAGE_DIR=%SCRIPT_DIR%\%PROJECT_NAME%"
-set "INIT_FILE=%PACKAGE_DIR%\__init__.py"
-if not exist "%INIT_FILE%" (
-    echo ERROR: __init__.py not found in %PACKAGE_DIR%
-    popd
-    pause
-    exit /b 1
+REM 3. 从 pyproject.toml 中提取 version
+set "VER="
+for /f "tokens=2 delims== " %%V in ('findstr /R "^version *= *\"[0-9]\+\.[0-9]\+\.[0-9]\+\"" pyproject.toml') do (
+    set "VER_RAW=%%~V"
 )
-for /f "tokens=2 delims==" %%V in ('findstr /R "__version__ *= *" "%INIT_FILE%"') do set "VER_RAW=%%V"
-rem Strip surrounding quotes (double and single) and spaces
 set "VER=!VER_RAW:"=!"
-set "VER=!VER:'=!"
-set "VER=!VER: =!"
-echo Version: !VER!
+if "!VER!"=="" (
+    echo [ERROR] 无法从 pyproject.toml 提取版本号！
+    popd & pause & exit /b 1
+)
+echo [INFO] Version: !VER!
 
-REM --- Git operations using git.exe to avoid recursion ---
-echo Committing local changes...
-git.exe add .
-git.exe commit -m "Release version !VER!" || echo No changes to commit.
+REM 4. 自动识别主分支名称（master 或 main）
+set "PRIMARY=master"
+git rev-parse --verify master >nul 2>&1 || set "PRIMARY=main"
+echo [INFO] Primary branch: %PRIMARY%
 
-echo Determining current branch...
-for /f "tokens=*" %%B in ('git.exe rev-parse --abbrev-ref HEAD') do set "CURRENT=%%B"
-echo Current branch: !CURRENT!
+REM 5. 记录当前开发分支
+for /f "tokens=*" %%B in ('git rev-parse --abbrev-ref HEAD') do set "CURRENT=%%B"
+echo [INFO] Current branch: %CURRENT%
 
-echo Switching to master...
-git.exe checkout master
+REM 6. **一次性提交所有改动**（respect .gitignore）
+echo [INFO] Staging ALL changes (add -A, respects .gitignore)...
+git add -A
 
-echo Pulling latest master...
-git.exe pull origin master
+echo [INFO] Committing local changes...
+git commit -m "chore(release): auto-commit all changes for v!VER!" || echo [INFO] No changes to commit.
 
-echo Merging !CURRENT! into master...
-if /I NOT "!CURRENT!"=="master" (
-    git.exe merge "!CURRENT!" || echo Merge skipped.
+REM 到此，工作区已干净，不会再丢失本地改动
+
+REM 7. 切换到主分支并拉取最新
+echo [INFO] Checking out %PRIMARY%...
+git checkout %PRIMARY%  || (echo [ERROR] Checkout %PRIMARY% failed! & popd & pause & exit /b 1)
+
+echo [INFO] Pulling origin/%PRIMARY%...
+git pull origin %PRIMARY% || (echo [ERROR] Pull failed! & popd & pause & exit /b 1)
+
+REM 8. 合并当前分支到主分支
+if /I NOT "%CURRENT%"=="%PRIMARY%" (
+    echo [INFO] Merging %CURRENT% into %PRIMARY%...
+    git merge "%CURRENT%" || (
+        echo [ERROR] Merge conflict! 请手动解决后重试。
+        popd & pause & exit /b 1
+    )
 )
 
-echo Pushing master to origin...
-git.exe push origin master
+REM 9. 推送主分支
+echo [INFO] Pushing %PRIMARY%...
+git push origin %PRIMARY% || (
+    echo [ERROR] Push %PRIMARY% 失败! & popd & pause & exit /b 1
+)
 
-echo Creating and pushing version branch v!VER!...
-git.exe checkout -b v!VER!
-git.exe push -u origin v!VER!
+REM 10. 创建或重建版本分支 v<VER>
+set "TAGBR=v!VER!"
+git branch --list %TAGBR% >nul 2>&1 && (
+    echo [INFO] Deleting existing local branch %TAGBR%...
+    git branch -D %TAGBR%
+)
+echo [INFO] Creating branch %TAGBR% from %PRIMARY%...
+git checkout -b %TAGBR% || (
+    echo [ERROR] 无法创建分支 %TAGBR%! & popd & pause & exit /b 1
+)
+
+echo [INFO] Pushing branch %TAGBR%...
+git push -u origin %TAGBR% || (
+    echo [ERROR] Push %TAGBR% 失败! & popd & pause & exit /b 1
+)
+
+REM 11. 切回原来开发分支
+echo [INFO] Returning to branch %CURRENT%...
+git checkout "%CURRENT%" || (
+    echo [ERROR] Checkout %CURRENT% 失败! & popd & pause & exit /b 1
+)
 
 popd
-echo Done.
+echo [INFO] 完成！
 pause
 endlocal
-```

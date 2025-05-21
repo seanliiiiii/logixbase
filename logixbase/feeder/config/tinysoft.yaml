@@ -68,7 +68,7 @@ column:
   投资目标: Target
   募集总份额: TotalIssuedShares
   标的指数代码: BenchMark
-  一级市场代码: TradeInstrument
+  一级市场代码: PrimInstrument
   指数起始点: BeginPoint
   样本个数: SampleSize
   指数类型: IndexClassL1
@@ -137,7 +137,7 @@ decode:
   Board: gbk
   SWClassLevel2: utf8
   SWClassLevel1: utf8
-  TradeInstrument: utf8
+  PrimInstrument: utf8
   Style: gbk
   BenchMark: utf8
   Target: gbk

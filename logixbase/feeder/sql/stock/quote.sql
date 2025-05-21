@@ -130,7 +130,7 @@ BEGIN
         CREATE NONCLUSTERED INDEX [' + @table + '_4] ON [' + @db + '].[dbo].[' + @table + '] (UpdateTime)
         WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
 
-        CREATE UNIQUE NONCLUSTERED INDEX ['' + @table + ''_5] ON ['' + @db + ''].[dbo].['' + @table + ''] (TradeDay, DateTime)
+        CREATE UNIQUE NONCLUSTERED INDEX [' + @table + '_5] ON [' + @db + '].[dbo].[' + @table + '] (TradeDay, DateTime)
         WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = ON, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
         '';
 

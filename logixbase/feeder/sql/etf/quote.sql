@@ -1,6 +1,6 @@
 DECLARE @db NVARCHAR(100) = '{{db}}';             -- 替换为你的数据库名
 DECLARE @table NVARCHAR(100) = '{{table}}';       -- 分钟线或日线表名
-DECLARE @status_table NVARCHAR(100) = 'UpdateRecord_{{label}}';  -- 状态表固定名
+DECLARE @status_table NVARCHAR(100) = 'UpdateRecord';  -- 状态表固定名
 
 DECLARE @sql NVARCHAR(MAX);
 
@@ -130,7 +130,7 @@ BEGIN
         CREATE NONCLUSTERED INDEX [' + @table + '_4] ON [' + @db + '].[dbo].[' + @table + '] (UpdateTime)
         WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
 
-        CREATE UNIQUE NONCLUSTERED INDEX ['' + @table + ''_5] ON ['' + @db + ''].[dbo].['' + @table + ''] (TradeDay, DateTime)
+        CREATE UNIQUE NONCLUSTERED INDEX [' + @table + '_5] ON [' + @db + '].[dbo].[' + @table + '] (TradeDay, DateTime)
         WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = ON, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
         '';
 

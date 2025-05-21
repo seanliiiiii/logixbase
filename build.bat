@@ -2,14 +2,18 @@
 setlocal enabledelayedexpansion
 set PYTHONUTF8=1
 
-:: === Step 1: Get version from get_version.py ===
-FOR /F "delims=" %%F IN ('python get_version.py') DO (
-    SET "PROJECT_VERSION=%%F"
+:: === Step 1: Get version from pyproject.toml ===
+FOR /F "tokens=2 delims== " %%F IN ('findstr /r "^version *= *\"[0-9\.]\+\"" pyproject.toml') DO (
+    SET "PROJECT_VERSION=%%~F"
 )
-if /I "%PROJECT_VERSION%"=="VERSION_NOT_FOUND" (
-    echo [ERROR] Failed to extract version.
+:: 去除引号
+SET "PROJECT_VERSION=%PROJECT_VERSION:"=%"
+
+if /I "%PROJECT_VERSION%"=="" (
+    echo [ERROR] Failed to extract version from pyproject.toml.
     exit /b 1
 )
+echo [INFO] Project version detected: v%PROJECT_VERSION%
 echo [INFO] Project version detected: v%PROJECT_VERSION%
 
 :: === Step 4: Check if version exists on PyPI ===

@@ -382,14 +382,15 @@ class TinysoftFeeder(BaseFeeder):
     def etf_info_basic(self):
         """Get all basic information of domestic ETFs in history"""
         self.check_connect()
-        cols = ["Ticker", "Name", "EstablishDate", "ListDate", "Exchange", "Style", "Target", "TotalIssuedShares",
-                "BenchMark", "TradeInstrument"]
+        cols = ["Ticker", "PrimInstrument", "Name", "EstablishDate", "ListDate", "Exchange", "Style", "Target",
+                "TotalIssuedShares","BenchMark"]
         # Query data from Tinysoft
         use_table = self._use_table["etf_info"]
         query = f"""
                  RETURN QUERY(
                  '{use_table}', '' , TRUE, '', 
                  '一级市场代码', DEFAULTSTOCKID(),
+                 '代码', BASE(302033),
                  '名称', BASE(302001),
                  '成立日期', BASE(302003),
                  '变动日(初值)', BASE(302004),
@@ -397,8 +398,7 @@ class TinysoftFeeder(BaseFeeder):
                  '投资风格', BASE(302014),
                  '投资目标', BASE(302015),
                  '募集总份额', BASE(302049),
-                 '标的指数代码', BASE(302039),
-                 '代码', BASE(302033)
+                 '标的指数代码', BASE(302039)
                  );
                  """
         data = self.exec_query(query, msg="ETF基础信息")
@@ -465,7 +465,7 @@ class TinysoftFeeder(BaseFeeder):
             # Filter invalid data
             basic_info = basic_info[~(basic_info.loc[:, "ListDate"] == 0)]
             # Data map
-            basic_info.loc[:, "Exchange"] = basic_info.loc[:, "Exchange"].map(self._exchange_map)
+            basic_info.loc[:, "Exchange"] = basic_info.loc[:, "Exchange"].map(lambda x: self._exchange_map.get(x, x))
             basic_info.loc[:, "IndexClassL1"] = basic_info.loc[:, "IndexClassL1"].map(self._index["class"]["level1"])
             basic_info.loc[:, "IndexClassL2"] = basic_info.loc[:, "IndexClassL2"].map(self._index["class"]["level2"])
             basic_info.loc[:, "IndexClassL3"] = basic_info.loc[:, "IndexClassL3"].map(self._index["class"]["level3"])
@@ -655,7 +655,7 @@ class TinysoftFeeder(BaseFeeder):
         # 统一时间
         ts_start, ts_end = self._parse_to_tstime(start, end, interval)
         # 解析为天软识别的ticker
-        ts_tickers = self._parse_to_tsticker("etf", ticker)
+        ts_tickers = self._parse_to_tsticker("etf_quote", ticker)
 
         query = f"""
                  SETSYSPARAM(PN_CYCLE(),CY_{interval}()); 

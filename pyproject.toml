@@ -4,7 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "logixbase"
-description = "高度模块化的量化交易策略开发框架"
+version = "0.4.2"
+description = "LogixQuant基础功能包项目"
 readme = "README.md"
 requires-python = ">=3.9"
 dynamic = ["version"]
