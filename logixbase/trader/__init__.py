@@ -5,7 +5,7 @@ from .schema import (FutureInfo, OptionInfo, StockInfo, IndexInfo, EtfInfo, QmFa
                      TickData, AccountInfo, AccountPosition, OrderData, StopOrder, TradeData)
 from .tool import StrategyTemplate, BarGenerator, TickArrayManager, BarArrayManager, adjust_econ_data, season_adj, EdbArrayManager
 from .utils import (ticker_to_instrument, instrument_to_ticker, instrument_to_product, round_to, floor_to, ceil_to,
-                    calc_daily_bars, update_product, adjust_price, get_calendar_contract, parse_ticker)
+                    calc_daily_bars, update_product, adjust_price, get_calendar_contract, parse_ticker, parse_exchange)
 
 __all__ = ['EXCHANGE_MAP',
            'PRODUCT_NAME_MAP',
@@ -57,5 +57,5 @@ __all__ = ['EXCHANGE_MAP',
            'adjust_price',
            'get_calendar_contract',
            'parse_ticker',
-
+           'parse_exchange'
            ]

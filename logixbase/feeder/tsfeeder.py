@@ -364,6 +364,7 @@ class TinysoftFeeder(BaseFeeder):
             # Filter invalid data
             basic_info = basic_info[~(basic_info["ListDate"] == 0)]
             # Data map
+            basic_info["Ticker"] = basic_info["Ticker"].map(lambda x: ''.join(filter(str.isdigit, x)))
             basic_info.loc[:, "Exchange"] = basic_info.loc[:, "Exchange"].map(self._exchange_map)
             basic_info.loc[:, "Board"] = basic_info.loc[:, "Board"].map(self._stock["board"])
             basic_info.loc[:, "Status"] = basic_info.loc[:, "Status"].map(self._status_map)
@@ -411,6 +412,7 @@ class TinysoftFeeder(BaseFeeder):
             # Filter invalid data
             basic_info = basic_info[~(basic_info["ListDate"] == 0)]
             # Data map
+            basic_info["Ticker"] = basic_info["Ticker"].map(lambda x: ''.join(filter(str.isdigit, x)))
             basic_info.loc[:, "Exchange"] = basic_info.loc[:, "Exchange"].map(self._exchange_map)
             basic_info.loc[:, "Style"] = basic_info.loc[:, "Style"].map(self._etf["class"]["style"])
             basic_info["EstablishDate"][basic_info["EstablishDate"] == 0] = basic_info["ListDate"]
@@ -637,6 +639,7 @@ class TinysoftFeeder(BaseFeeder):
             quote = pd.DataFrame(data)
             quote.columns = [i.decode("utf8") for i in quote.columns]
             quote = self._decode_data(quote).loc[:, cols]
+            quote["Ticker"] = quote["Ticker"].map(lambda x: ''.join(filter(str.isdigit, x)))
             quote["DateTime"] = quote["DateTime"].map(unify_time)
             quote.iloc[:, 2:] = quote.iloc[:, 2:].astype(float)
         else:
@@ -686,6 +689,7 @@ class TinysoftFeeder(BaseFeeder):
             quote = pd.DataFrame(data)
             quote.columns = [i.decode("utf8") for i in quote.columns]
             quote = self._decode_data(quote).loc[:, cols]
+            quote["Ticker"] = quote["Ticker"].map(lambda x: ''.join(filter(str.isdigit, x)))
             quote["DateTime"] = quote["DateTime"].map(unify_time)
             quote.iloc[:, 2:] = quote.iloc[:, 2:].astype(float)
         else:
@@ -931,6 +935,7 @@ class TinysoftFeeder(BaseFeeder):
             coef_adj.columns = [i.decode("utf8") for i in coef_adj.columns]
             coef_adj = self._decode_data(coef_adj)
             coef_adj = coef_adj.loc[:, cols]
+            coef_adj["Ticker"] = coef_adj["Ticker"].map(lambda x: ''.join(filter(str.isdigit, x)))
             coef_adj['DateTime'] = coef_adj['DateTime'].map(unify_time)
             coef_adj = coef_adj[(coef_adj["CoefAdj"] != 0) & (~coef_adj["CoefAdj"].isna())]
         else:

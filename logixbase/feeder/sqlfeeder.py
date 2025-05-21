@@ -10,7 +10,7 @@ from .base import BaseFeeder
 from ..utils import (DatabaseConfig, DealWithSql, unify_time, select_date, transform_time_range, all_calendar)
 from ..configer import read_config
 from ..trader import (FutureInfo, StockInfo, IndexInfo, EtfInfo, OptionInfo, BarData, Interval, EdbInfo,
-                      instrument_to_ticker, instrument_to_product, Asset, parse_ticker)
+                      instrument_to_ticker, instrument_to_product, Asset, parse_ticker, parse_exchange)
 
 LOCAL_DIR = Path(__file__).parent
 
@@ -249,23 +249,15 @@ class SqlServerFeeder(BaseFeeder):
         return sorted(data)
 
     def stock_ticker(self, active: bool):
-
-        def _map(inst):
-            if inst.startswith("0") or inst.startswith("3"):
-                return "SZSE"
-            elif inst.startswith("6"):
-                return "SSE"
-            else:
-                return "BSE"
-        query = f"SELECT DISTINCT [Instrument],[Exchange] FROM [STOCK_RESEARCH_DAILY].[dbo].[STOCKINFO_BASIC]"
+        query = f"SELECT DISTINCT [Ticker],[Exchange] FROM [STOCK_RESEARCH_DAILY].[dbo].[STOCKINFO_BASIC]"
         if active:
             query += " WHERE [Status] = 'Listed'"
         data = self._api.exec_query(query)
         data["Exchange"] = data["Exchange"].map(self._exchange)
         mask = data["Exchange"].isna()
-        data.loc[mask, "Exchange"] = data.loc[mask, "Instrument"].map(_map)
+        data.loc[mask, "Exchange"] = data.loc[mask, "Ticker"].map(lambda x: parse_exchange("stock", x))
         data = data.to_dict(orient="records")
-        data = [instrument_to_ticker("stock", k["Exchange"], k["Instrument"]) for k in data]
+        data = [instrument_to_ticker("stock", k["Exchange"], k["Ticker"]) for k in data]
         return sorted(data)
 
     def index_ticker(self):
@@ -277,11 +269,11 @@ class SqlServerFeeder(BaseFeeder):
         return sorted(data)
 
     def etf_ticker(self):
-        query = f"SELECT DISTINCT [Instrument], [Exchange] FROM [ETF_RESEARCH_DAILY].[dbo].[ETFINFO_BASIC]"
+        query = f"SELECT DISTINCT [Ticker], [Exchange] FROM [ETF_RESEARCH_DAILY].[dbo].[ETFINFO_BASIC]"
         data = self._api.exec_query(query)
         data["Exchange"] = data["Exchange"].map(self._exchange)
         data = data.to_dict(orient="records")
-        data = [instrument_to_ticker("etf", k["Exchange"], k["Instrument"]) for k in data]
+        data = [instrument_to_ticker("etf", k["Exchange"], k["Ticker"]) for k in data]
         return sorted(data)
 
     def option_ticker(self, active: bool):
@@ -344,37 +336,38 @@ class SqlServerFeeder(BaseFeeder):
 
     def stock_info_basic(self, ticker: list = None):
         query = """
-                SELECT [Instrument], [Ticker] AS [DbTicker], [Name],[RegisteredCapital], [Representative], [EstablishDate],
-                        [ListDate], [Exchange] AS [ExgSymbol], [Board], [TotalShares], [TotalTradeableShares], [MainBusiness],
+                SELECT [Ticker], [Name],[RegisteredCapital], [Representative], [EstablishDate],
+                        [ListDate], [Exchange], [Board], [TotalShares], [TotalTradeableShares], [MainBusiness],
                         [Status], [SWClassLevel1], [SWClassLevel2], [SWClassLevel3]
                         FROM [STOCK_RESEARCH_DAILY].[dbo].[StockInfo_Basic]
                 """
         if ticker:
             ticker_lst = parse_ticker("stock", ticker)[1]
-            query += f"WHERE [Instrument] in ({str(set(ticker_lst))[1:-1]})"
+            query += f"WHERE [Ticker] in ({str(set(ticker_lst))[1:-1]})"
         data = self._api.exec_query(query)
         # 交易所信息缺失
-        mask = data["ExgSymbol"].isna()
-        data.loc[mask, "ExgSymbol"] = data.loc[mask, "DbTicker"].map(lambda x: x[:2])
-        data["Exchange"] = data["ExgSymbol"].map(lambda x: self._exchange.get(x, x))
+        mask = data["Exchange"].isna()
+        data.loc[mask, "Exchange"] = data.loc[mask, "Ticker"].map(lambda x: parse_exchange("stock", x))
         return data
 
     def etf_info_basic(self, ticker: list = None):
         query = """
-                SELECT [Instrument], [Ticker] AS [DbTicker], [Name], [EstablishDate],[ListDate]
-                      ,[Exchange] AS [ExgSymbol],[Style],[Target],[TotalIssuedShares],[BenchMark],[TradeSymbol]  
+                SELECT [Ticker], [Name], [EstablishDate],[ListDate],[Exchange],[Style],[Target],
+                        [TotalIssuedShares],[BenchMark],[TradeSymbol]  
                 FROM [ETF_RESEARCH_DAILY].[dbo].[ETFInfo_Basic]
                 """
         if ticker:
             ticker_lst = parse_ticker("etf", ticker)[1]
-            query += f"WHERE [Instrument] in ({str(set(ticker_lst))[1:-1]})"
+            query += f"WHERE [Ticker] in ({str(set(ticker_lst))[1:-1]})"
         data = self._api.exec_query(query)
-        data["Exchange"] = data["ExgSymbol"].map(lambda x: self._exchange.get(x, x))
+        # 交易所信息缺失
+        mask = data["Exchange"].isna()
+        data.loc[mask, "Exchange"] = data.loc[mask, "Ticker"].map(lambda x: parse_exchange("stock", x))
         return data
 
     def index_info_basic(self, ticker: list = None):
         query = """
-                SELECT [Ticker], [Name], [Exchange] AS [ExgSymbol], [EstablishDate],[ListDate],[BeginPoint],[SampleSize],
+                SELECT [Ticker], [Name], [Exchange], [EstablishDate],[ListDate],[BeginPoint],[SampleSize],
                         [IndexClass1],[IndexClass2],[IndexClass3] 
                 FROM [INDEX_RESEARCH_DAILY].[dbo].[IndexInfo_Basic]
                 """
@@ -451,9 +444,10 @@ class SqlServerFeeder(BaseFeeder):
             info_list = [FutureInfo(**k) for k in info_list]
             return {k.ticker: k for k in info_list}
         elif asset == "stock":
-            info = info.loc[:, ["Instrument", "Name", "EstablishDate", "ListDate", "Exchange", "TotalShares",
+            info = info.loc[:, ["Ticker", "Name", "EstablishDate", "ListDate", "Exchange", "TotalShares",
                                 "TotalTradeableShares", "Status", "SWClassLevel1", "SWClassLevel2",
-                                "SWClassLevel3"]].rename(columns={"TotalTradeableShares": "flowshare",
+                                "SWClassLevel3"]].rename(columns={"Ticker": "Instrument",
+                                                                  "TotalTradeableShares": "flowshare",
                                                                   "TotalShares": "allshare",
                                                                   "SWClassLevel1": "sw_class_level1",
                                                                   "SWClassLevel2": "sw_class_level2",
@@ -473,7 +467,7 @@ class SqlServerFeeder(BaseFeeder):
         elif asset == "etf":
             info["asset"] = "etf"
             info.columns = info.columns.str.lower()
-            info = info.rename(columns={"totalissuedshares": "allshares"})
+            info = info.rename(columns={"totalissuedshares": "allshares", "ticker": "instrument"})
             info_list = info.fillna("").to_dict(orient="records")
             info_list = [EtfInfo(**k) for k in info_list]
             return {k.ticker: k for k in info_list}
@@ -956,7 +950,7 @@ class SqlServerFeeder(BaseFeeder):
                 Base AS (
                     SELECT 
                         q.[DateTime], q.[TradeDay], q.[Ticker], 'STK' AS [Product], 
-                        i.[Exchange], i.[Instrument], q.[Open], q.[High], q.[Low], q.[Close], 
+                        i.[Exchange], q.[Ticker] AS [Instrument], q.[Open], q.[High], q.[Low], q.[Close], 
                         q.[PrevClose], q.[Volume], q.[Amount], q.[DealNumber], q.[Committee], 
                         q.[QuantityRelative], q.[BuyVolume], q.[BuyAmount], q.[SaleVolume], 
                         q.[SaleAmount], q.[CommitBuy], q.[CommitSale],
@@ -966,16 +960,16 @@ class SqlServerFeeder(BaseFeeder):
                         END AS [Settle]
                     FROM [STOCK_RESEARCH_DAILY].[dbo].[STOCKQUOTE_DAILY] q
                     INNER JOIN (
-                        SELECT [Ticker], [Exchange], [Instrument]
+                        SELECT [Ticker], [Exchange]
                         FROM [STOCK_RESEARCH_DAILY].[dbo].[STOCKInfo_Basic]
-                        {f"WHERE [Instrument] IN ({str(set(ticker_lst))[1:-1]})" if ticker else ''}
+                        {f"WHERE [Ticker] IN ({str(set(ticker_lst))[1:-1]})" if ticker else ''}
                     ) i ON q.[Ticker] = i.[Ticker]
                     CROSS JOIN PrevDay p
                     WHERE q.[TradeDay] >= p.PrevDay AND q.[TradeDay] <= '{end_}'
                 ),
                 ADDPREV AS (SELECT *, 
                        LAG(Settle) OVER (
-                           PARTITION BY Instrument
+                           PARTITION BY [Ticker]
                            ORDER BY TradeDay
                        ) AS PrevSettle
                 FROM Base)
@@ -1029,7 +1023,7 @@ class SqlServerFeeder(BaseFeeder):
     
                     SELECT @individualSQL = STRING_AGG(CAST(
                         '
-                        SELECT *, ''' + T.Ticker + ''' AS [Ticker], ''' + T.Instrument + ''' AS Instrument,
+                        SELECT *, ''' + T.Ticker + ''' AS [Ticker], ''' + T.[Ticker] + ''' AS Instrument,
                                 ''' + T.Exchange + ''' AS [Exchange],
                                CASE WHEN Volume = 0 THEN [Close] ELSE ROUND(Amount * 1.0 / NULLIF(Volume, 0), 2) END AS Settle
                         FROM [' + @db + '].[dbo].[' + T.Ticker + ']
@@ -1038,7 +1032,7 @@ class SqlServerFeeder(BaseFeeder):
                     FROM [STOCK_RESEARCH_DAILY].[dbo].[StockInfo_Basic] T
                     WHERE (
                         @InstrumentList IS NULL OR @InstrumentList = ''
-                        OR T.Instrument IN (
+                        OR T.[Ticker] IN (
                             SELECT LTRIM(RTRIM(value)) FROM STRING_SPLIT(@InstrumentList, ',')
                         )
                     )
@@ -1068,7 +1062,7 @@ class SqlServerFeeder(BaseFeeder):
                         WHERE Ticker IN (
                             SELECT DISTINCT Ticker
                             FROM [STOCK_RESEARCH_DAILY].[dbo].[StockInfo_Basic]
-                            WHERE Instrument IN (
+                            WHERE Ticker IN (
                                 SELECT LTRIM(RTRIM(value)) FROM STRING_SPLIT(''' + @InstrumentList + ''', '','')
                             )
                         )
@@ -1152,12 +1146,12 @@ class SqlServerFeeder(BaseFeeder):
                 IF OBJECT_ID('tempdb..#TickerMap') IS NOT NULL DROP TABLE #TickerMap;
                 
                 SELECT DISTINCT
-                    Ticker,
-                    Instrument,
-                    Exchange
+                    [Ticker],
+                    [Ticker] AS [Instrument],
+                    [Exchange]
                 INTO #TickerMap
                 FROM [{asset}_RESEARCH_DAILY].[dbo].[{asset}Info_Basic]
-                WHERE Instrument IN (
+                WHERE [Ticker] IN (
                     SELECT TRIM(value)
                     FROM STRING_SPLIT(@InstrumentList, ',')
                 )
@@ -1598,7 +1592,7 @@ class SqlServerFeeder(BaseFeeder):
                 Base AS (
                     SELECT 
                         q.[DateTime], q.[TradeDay], q.[Ticker], 'ETF' AS [Product], 
-                        i.[Exchange], i.[Instrument], q.[Open], q.[High], q.[Low], q.[Close], 
+                        i.[Exchange], q.[Ticker] AS [Instrument], q.[Open], q.[High], q.[Low], q.[Close], 
                         q.[PrevClose], q.[Volume], q.[Amount], q.[DealNumber], q.[Committee], 
                         q.[QuantityRelative], q.[BuyVolume], q.[BuyAmount], q.[SaleVolume], 
                         q.[SaleAmount], q.[CommitBuy], q.[CommitSale],
@@ -1608,16 +1602,16 @@ class SqlServerFeeder(BaseFeeder):
                         END AS [Settle]
                     FROM [ETF_RESEARCH_DAILY].[dbo].[ETFQuote_Daily] q
                     INNER JOIN (
-                        SELECT [Ticker], [Exchange], [Instrument]
+                        SELECT [Ticker], [Exchange]
                         FROM [ETF_RESEARCH_DAILY].[dbo].[ETFInfo_Basic]
-                        {f"WHERE [Instrument] IN ({str(set(ticker_lst))[1:-1]})" if ticker else ''}
+                        {f"WHERE [Ticker] IN ({str(set(ticker_lst))[1:-1]})" if ticker else ''}
                     ) i ON q.[Ticker] = i.[Ticker]
                     CROSS JOIN PrevDay p
                     WHERE q.[TradeDay] >= p.PrevDay AND q.[TradeDay] <= '{end_}'
                 ),
                 ADDPREV AS (SELECT *, 
                        LAG(Settle) OVER (
-                           PARTITION BY Instrument
+                           PARTITION BY [Ticker]
                            ORDER BY TradeDay
                        ) AS PrevSettle
                 FROM Base)
@@ -1670,8 +1664,8 @@ class SqlServerFeeder(BaseFeeder):
 
                     SELECT @individualSQL = STRING_AGG(CAST(
                         '
-                        SELECT *, ''' + T.Ticker + ''' AS [Ticker], ''' + T.Instrument + ''' AS Instrument,
-                                ''' + T.Exchange + ''' AS [Exchange],
+                        SELECT *, ''' + T.[Ticker] + ''' AS [Ticker], ''' + T.[Ticker] + ''' AS [Instrument],
+                                ''' + T.[Exchange] + ''' AS [Exchange],
                                CASE WHEN Volume = 0 THEN [Close] ELSE ROUND(Amount * 1.0 / NULLIF(Volume, 0), 2) END AS Settle
                         FROM [' + @db + '].[dbo].[' + T.Ticker + ']
                         WHERE TradeDay >= ''' + @PrevDayStr + ''' AND TradeDay <= ''' + @EndDayStr + ''''
@@ -1679,7 +1673,7 @@ class SqlServerFeeder(BaseFeeder):
                     FROM [ETF_RESEARCH_DAILY].[dbo].[ETFInfo_Basic] T
                     WHERE (
                         @InstrumentList IS NULL OR @InstrumentList = ''
-                        OR T.Instrument IN (
+                        OR T.[Ticker] IN (
                             SELECT LTRIM(RTRIM(value)) FROM STRING_SPLIT(@InstrumentList, ',')
                         )
                     )
@@ -1692,7 +1686,7 @@ class SqlServerFeeder(BaseFeeder):
                     ADDPREV AS (
                         SELECT *,
                                LAG(Settle) OVER (
-                                   PARTITION BY Instrument
+                                   PARTITION BY [Instrument]
                                    ORDER BY DateTime
                                ) AS PrevSettle
                         FROM AllDataWithSettle
@@ -1817,20 +1811,21 @@ class SqlServerFeeder(BaseFeeder):
     def stock_coef_adj(self, ticker: Union[list, tuple], start: Union[datetime, str, int],
                        end: Union[datetime, str, int]):
         # 统一日期格式
-        start_ = unify_time(start, fmt="str", mode=3, dot="")
+        start_ = unify_time(start, mode=3, dot="")
         end_ = unify_time(end, fmt="str", mode=3, dot="")
         # 解析品种列表
         product, ticker_lst = parse_ticker("stock", ticker)
         query = f"""
                  SELECT [TradeDay], [Ticker], [Product], [Instrument], [Exchange], 
                         CAST([CoefAdj] AS FLOAT) AS [CoefAdj]
-                 FROM (SELECT a.[TradeDay], b.[Instrument] AS [Ticker], 'STK' AS [Product], b.[Instrument], b.[Exchange],
+                 FROM (SELECT a.[TradeDay], b.[Ticker], 'STK' AS [Product], b.[Ticker] AS [Instrument],
+                            b.[Exchange],
                             CAST(EXP(SUM(LOG(a.[CoefAdj])) 
                             OVER (PARTITION BY a.[Ticker] ORDER BY a.[TradeDay])) AS DECIMAL(18, 4)) AS [CoefAdj]
                        FROM [STOCK_RESEARCH_DAILY].[dbo].[StockCoefAdj] a
                        INNER JOIN [STOCK_RESEARCH_DAILY].[dbo].[StockInfo_Basic] b
                        on a.Ticker = b.Ticker
-                       WHERE b.[Instrument] in ({str(ticker_lst)[1:-1]})) c
+                       WHERE b.[Ticker] in ({str(ticker_lst)[1:-1]})) c
                 """
         data = self._api.exec_query(query)
         data["Exchange"] = data["Exchange"].map(self._exchange)
@@ -1839,7 +1834,7 @@ class SqlServerFeeder(BaseFeeder):
         coef_adj = pd.merge(coef_adj, data, on="TradeDay", how="left")
         coef_adj = coef_adj.set_index(["TradeDay", "Ticker"])[['CoefAdj']].unstack().fillna(method="pad").stack().reset_index()
         coef_adj = pd.merge(coef_adj, data[["Ticker", "Product", "Instrument", "Exchange"]], on="Ticker", how="left")
-        coef_adj = coef_adj.loc[coef_adj["TradeDay"] >= unify_time(start, mode=3)]
+        coef_adj = coef_adj.loc[coef_adj["TradeDay"] >= start_]
         return coef_adj
 
     def edb_info(self, ticker: Union[list, tuple, dict] = None, use_schema: bool = False):

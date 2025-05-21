@@ -15,7 +15,6 @@ BEGIN
     CREATE TABLE [' + @db + '].[dbo].[' + @infotable + '] (
         [PK] INT NOT NULL IDENTITY (1, 1),
         [Ticker] VARCHAR(10) NOT NULL,
-        [Instrument] VARCHAR(10) NOT NULL,
         [Name] NVARCHAR(MAX) NOT NULL,
         [EstablishDate] DATETIME NULL,
         [ListDate] DATETIME NULL,
@@ -45,8 +44,6 @@ BEGIN
     CREATE NONCLUSTERED INDEX ' + @infotable + '_3 ON [' + @db + '].[dbo].[' + @infotable + '] (Ticker, BenchMark)
         WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
     CREATE NONCLUSTERED INDEX ' + @infotable + '_4 ON [' + @db + '].[dbo].[' + @infotable + '] (Ticker, ListDate)
-        WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
-    CREATE NONCLUSTERED INDEX ' + @infotable + '_6 ON [' + @db + '].[dbo].[' + @infotable + '] (Instrument)
         WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
     '';
     EXEC(@createix_inner);

@@ -11,6 +11,22 @@ from .config import PRODUCT_NAME_MAP, INSTRUMENT_FORMAT
 MAX_FLOAT = sys.float_info.max
 
 
+def parse_exchange(asset: str, ticker: str):
+    instrument = ''.join(filter(str.isdigit, ticker))
+    if asset.lower() == "stock":
+        if instrument.startswith("0") or instrument.startswith("3"):
+            return "SZSE"
+        elif instrument.startswith("6"):
+            return "SSE"
+        else:
+            return "BSE"
+    elif asset.lower() == "etf":
+        if instrument.startswith("5"):
+            return "SSE"
+        elif instrument.startswith("1"):
+            return "SZSE"
+
+
 def parse_ticker(asset: str, ticker: list):
     """解析传入标准的ticker列表，拆分为具体合约ticker和product列表"""
     if ticker is None:

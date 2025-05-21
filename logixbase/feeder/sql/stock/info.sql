@@ -15,7 +15,6 @@ BEGIN
     CREATE TABLE ' + QUOTENAME(@db) + '.dbo.' + QUOTENAME(@info_table) + ' (
         [PK] INT NOT NULL IDENTITY (1, 1),
         [Ticker] NVARCHAR(10) NOT NULL,
-        [Instrument] NVARCHAR(10) NOT NULL,
         [Name] NVARCHAR(10) NOT NULL,
         [RegisteredCapital] FLOAT NULL,
         [Representative] NVARCHAR(MAX) NULL,

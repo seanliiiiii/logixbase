@@ -133,7 +133,7 @@ def send_mail_file(subject: str,
     mail_host = mail_setting.host
     mail_user = mail_setting.username
     mail_pass = mail_setting.password
-    mail_name = mail_setting.mail_name
+    mail_name = mail_setting.mailname
     assert type(files) == list
 
     msg = MIMEMultipart()
@@ -194,7 +194,7 @@ def send_email_text(subject: str,
     mail_host = mail_setting.host
     mail_user = mail_setting.username
     mail_pass = mail_setting.password
-    mail_name = mail_setting.mail_name
+    mail_name = mail_setting.mailname
 
     mail_sender = "<" + mail_name + ">"
     # msg = MIMEText(content,_subtype="plain",_charset="gb2312")
