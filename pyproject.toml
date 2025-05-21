@@ -4,8 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "logixbase"
-version = "0.4.2"
+version = "0.4.3"
 description = "LogixQuant基础功能包项目"
+repository = "git@github.com:seanliiiiii/logixbase.git"
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "MIT License"}
