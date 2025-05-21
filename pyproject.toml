@@ -8,7 +8,6 @@ version = "0.4.2"
 description = "LogixQuant基础功能包项目"
 readme = "README.md"
 requires-python = ">=3.9"
-dynamic = ["version"]
 license = {text = "MIT License"}
 authors = [
     {name = "LogixBase开发团队", email = "trader@logixquant.com"}
