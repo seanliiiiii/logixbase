@@ -29,7 +29,9 @@ class ProcessExecutor(BaseExecutor):
                  batch_size: int=100):
         super().__init__(mode)
 
-        self.max_workers = max_workers
+        self.max_workers = min(max_workers, mp.cpu_count() - 1)
+        if mode != "pool":
+            self.max_workers = min(61, self.max_workers)
         self.maxtasksperchild = maxtasksperchild
         self.batch_size = batch_size
 
