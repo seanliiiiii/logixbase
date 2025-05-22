@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "logixbase"
-version = "0.4.3"
+version = "0.4.4"
 description = "LogixQuant基础功能包项目"
 repository = "git@github.com:seanliiiiii/logixbase.git"
 readme = "README.md"
@@ -57,6 +57,7 @@ dependencies = [
     "fastapi>=0.70.0",
     "pandas_market_calendars>=4.0.0",
     "paramiko==2.10.0",
+    "jinjia2>=3.1.4"
 ]
 
 [project.optional-dependencies]
@@ -101,4 +102,4 @@ python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
-disallow_incomplete_defs = false 
+disallow_incomplete_defs = false
