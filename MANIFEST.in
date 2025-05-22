@@ -11,6 +11,6 @@ recursive-include logixbase/gateway/api *
 recursive-include logixbase/logger/dashboard *
 
 # 排除不必要的文件
-global-exclude *.py[cod] __pycache__ *.so
+global-exclude __pycache__
 global-exclude .git* .DS_Store
 global-exclude *.egg-info 
