@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "logixbase"
-version = "0.4.7"
+version = "0.5.0"
 description = "LogixQuant基础功能包项目"
 readme = "README.md"
 requires-python = ">=3.9"
