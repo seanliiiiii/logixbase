@@ -108,6 +108,7 @@ class BaseEngine(ABC):
             except Exception as e:
                 self.logger.ERROR(f"停止组件[{component_id}]时出错: {e}")
                 self.logger.ERROR(traceback.format_exc())
+        self.logger.stop()
 
     def on_exit(self):
         """退出处理：资源释放、日志关闭等"""
@@ -137,9 +138,6 @@ class BaseEngine(ABC):
         """初始化日志管理器"""
         # 创建单例日志管理器
         self.logger = LogManager.get_instance(self.config.logger)
-        # 非多进程模式，直接启动日志管理器，否则需等待业务流程已启动多进程后再手动启动
-        if not self.config.logger.multiprocess:
-            self.logger.start()
 
     def setup_executor(self):
         """系统后台执行器，主要用于插件等功能的后台执行"""

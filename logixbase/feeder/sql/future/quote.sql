@@ -10,10 +10,6 @@ IF NOT EXISTS (
     WHERE name = N''' + @table + ''' AND type = ''U''
 )
 BEGIN
-    DECLARE @createtable CHAR(8000);
-    DECLARE @createix CHAR(8000);
-
-    SET @createtable = ''
     CREATE TABLE [' + @db + '].[dbo].[' + @table + '] (
         [PK] INT NOT NULL IDENTITY (1, 1),
         [DateTime] DATETIME NOT NULL,
@@ -35,10 +31,8 @@ BEGIN
         CONSTRAINT [PK_' + @table + '] PRIMARY KEY CLUSTERED ([PK] ASC)
         WITH (PAD_INDEX=OFF, STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF,
               ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON)
-    ) ON [PRIMARY]'';
-    EXEC(@createtable);
+    ) ON [PRIMARY];
 
-    SET @createix = ''
     CREATE NONCLUSTERED INDEX [' + @table + '_1] ON [' + @db + '].[dbo].[' + @table + '] (DateTime)
         WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
     CREATE NONCLUSTERED INDEX [' + @table + '_2] ON [' + @db + '].[dbo].[' + @table + '] (BarTime)
@@ -60,8 +54,8 @@ BEGIN
     CREATE UNIQUE NONCLUSTERED INDEX [' + @table + '_10] ON [' + @db + '].[dbo].[' + @table + '] (DateTime, Ticker)
         WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=ON, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
     CREATE UNIQUE NONCLUSTERED INDEX [' + @table + '_11] ON [' + @db + '].[dbo].[' + @table + '] (TradeDay, DateTime, Ticker)
-        WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=ON, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];'';
-    EXEC(@createix);
+        WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=ON, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
+
 END';
 EXEC sp_executesql @sql;
 
@@ -75,10 +69,6 @@ BEGIN
         WHERE name = N''' + @status_table + ''' AND type = ''U''
     )
     BEGIN
-        DECLARE @createtable2 CHAR(8000);
-        DECLARE @createix2 CHAR(8000);
-
-        SET @createtable2 = ''
         CREATE TABLE [' + @db + '].[dbo].[' + @status_table + '] (
             [PK] INT NOT NULL IDENTITY(1, 1),
             [TradeDay] DATETIME NOT NULL,
@@ -88,10 +78,8 @@ BEGIN
             CONSTRAINT [PK_' + @status_table + '] PRIMARY KEY CLUSTERED ([PK] ASC)
             WITH (PAD_INDEX=OFF, STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF,
                   ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON)
-        ) ON [PRIMARY]'';
-        EXEC(@createtable2);
+        ) ON [PRIMARY];
 
-        SET @createix2 = ''
         CREATE NONCLUSTERED INDEX [' + @status_table + '_1] ON [' + @db + '].[dbo].[' + @status_table + '] (TradeDay)
             WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
         CREATE NONCLUSTERED INDEX [' + @status_table + '_4] ON [' + @db + '].[dbo].[' + @status_table + '] (Product)
@@ -99,8 +87,7 @@ BEGIN
         CREATE NONCLUSTERED INDEX [' + @status_table + '_6] ON [' + @db + '].[dbo].[' + @status_table + '] (UpdateTime)
             WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
         CREATE UNIQUE NONCLUSTERED INDEX [' + @status_table + '_10] ON [' + @db + '].[dbo].[' + @status_table + '] (TradeDay, Product)
-            WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=ON, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];'';
-        EXEC(@createix2);
+            WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=ON, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
     END';
     EXEC sp_executesql @sql2;
 END

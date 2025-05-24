@@ -39,8 +39,8 @@ if __name__ == "__main__":
     if not callback.q.empty():
         tick = callback.q.get()
 
-    self = ctp.CtpTickClean()
-    for k, v in info.items():
-        self.register(k, v)
-    tick = self.clean_tick(tick)
+    # self = ctp.CtpTickClean()
+    # for k, v in info.items():
+    #     self.register(k, v)
+    # tick = self.clean_tick(tick)
 

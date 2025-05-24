@@ -40,9 +40,16 @@ class Asset(Enum):
     BOND = "bond"
     SPREAD = "spread"
     FUND = "fund"
-    COMBINATION = "combination"
-    EFP = "efp"
-    TAS = "tas"
+    EFP = "efp"                 # EFP合约：Exchange for Physical，套保合约
+    TAS = "tas"                 # TAS合约：TradeAtSettlement，用于套保
+
+
+class FutureSpread(Enum):
+    """期货价差合约定义：SP/SPD （DCE/GFEX）/CZCE跨期套利合约，SPC/IPS：(DCE/GFEX)/CZCE跨品种差价合约"""
+    SP = "sp"
+    SPD = "spd"
+    SPC = "spc"
+    IPS = "ips"
 
 
 class OrderType(Enum):

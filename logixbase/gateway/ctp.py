@@ -15,9 +15,10 @@ from typing import Union
 from datetime import datetime
 import numpy as np
 import pandas as pd
+from enum import Enum
 
 from ..trader import (AccountInfo, AccountPosition, TickData, adjust_price, round_to, FutureInfo, OptionInfo,
-                      ticker_to_instrument)
+                      ticker_to_instrument, instrument_to_ticker, instrument_to_product)
 from ..utils import unify_time, ProcessBar, all_tradeday, all_calendar
 
 from .base import BaseGateway
@@ -134,7 +135,7 @@ class CtpGateway(BaseGateway):
         if instruments is None:
             instruments = list(INSTRUMENT_INFO)
         # 订阅合约
-        instruments = [k for k in instruments if INSTRUMENT_INFO[k].asset.value in ("future", "option", "combination")]
+        instruments = [k for k in instruments if INSTRUMENT_INFO[k].asset.value in ("future", "option", "spread")]
         self.md_api.subscribe(instruments)
         return {INSTRUMENT_INFO[k].ticker: INSTRUMENT_INFO[k] for k in self.md_api.tick_count}
 
@@ -252,7 +253,7 @@ class BaseSpiTemplate:
                 return False
 
             # Print received data
-            if self._print_max:
+            if self._print_max > 0:
                 if rsp:
                     params = []
                     for name, value in inspect.getmembers(rsp):
@@ -272,7 +273,7 @@ class BaseSpiTemplate:
 
         else:
             # Print received data
-            if self._print_max and (self._print_count < self._print_max):
+            if self._print_max > 0 and (self._print_count < self._print_max):
                 if rsp:
                     params = []
                     for name, value in inspect.getmembers(rsp):
@@ -284,7 +285,8 @@ class BaseSpiTemplate:
             self._total += 1
 
             if is_last:
-                self.INFO(f"总计数量: {self._total} 打印数量: {self._print_count}")
+                if self._print_max > 0:
+                    self.INFO(f"总计数量: {self._total} 打印数量: {self._print_count}")
                 self._print_count = 0
 
                 self._total = 0
@@ -501,6 +503,15 @@ class CtpTdApi(tdapi.CThostFtdcTraderSpi,
         if res:
             data = self.get()
             data = {k.instrument: k for k in data}
+            # 调整spread合约的ticker
+            for info in data.values():
+                if info.asset.value == "spread":
+                    instrument_comb = info.instrument.split(" ")[1].replace(" ", "").split("&")
+                    info_comb = [data[k] for k in instrument_comb]
+                    deliver_year = [k.deliverdate for k in info_comb]
+                    deliver_year = [k.year for k in deliver_year] if all(deliver_year) else None
+                    info.ticker = instrument_to_ticker(info.asset.value, info.exchange.value, info.instrument, deliver_year)
+                    info.product = instrument_to_product(info.asset.value, info.instrument)
             self.INFO(f"合约查询成功: 总计{int(len(data))}")
             return data
         else:
@@ -518,7 +529,7 @@ class CtpTdApi(tdapi.CThostFtdcTraderSpi,
 
         _map = {tdapi.THOST_FTDC_PC_Futures: "future",
                 tdapi.THOST_FTDC_PC_Options: "option",
-                tdapi.THOST_FTDC_PC_Combination: "combination",
+                tdapi.THOST_FTDC_PC_Combination: "spread",
                 tdapi.THOST_FTDC_PC_Spot: "spot",
                 tdapi.THOST_FTDC_PC_EFP: "efp",
                 tdapi.THOST_FTDC_PC_SpotOption: "option",
@@ -669,6 +680,10 @@ class CtpTdApi(tdapi.CThostFtdcTraderSpi,
         if not self._check_rsp(rsp_info, md, is_last):
             self.ERROR(f"行情数据相应失败: {req_id}")
             self.qry_queue.put((None, is_last))
+            return
+
+        # 解析时间
+        if not md.ActionDay or not md.TradingDay or not md.UpdateTime:
             return
 
         tick = md_to_tick(md)
@@ -1222,7 +1237,7 @@ class CtpMdApi(BaseSpiTemplate,
     def on_rtn_depth_marketdata(self, md: mdapi.CThostFtdcDepthMarketDataField):
         """Tick回调后执行函数"""
         # 解析时间
-        if not md.ActionDay:
+        if not md.ActionDay or not md.TradingDay or not md.UpdateTime:
             return
 
         tick = md_to_tick(md)
@@ -1304,9 +1319,9 @@ class CtpTickClean:
 
         return tick
 
-    def register(self, ticker: str, info: Union[FutureInfo, OptionInfo] = None, trade_time: Union[dict, list] = None):
+    def register(self, info: Union[FutureInfo, OptionInfo], trade_time: Union[dict, list] = None):
         """注册待清洗合约。交易时间可选，未指定则使用默认时间"""
-        instrument = ticker_to_instrument(ticker)
+        instrument = info.instrument
         if instrument not in INSTRUMENT_INFO:
             if info:
                 INSTRUMENT_INFO[instrument] = info
@@ -1315,7 +1330,7 @@ class CtpTickClean:
 
         if instrument not in self._time_map:
             info = INSTRUMENT_INFO[instrument]
-            if trade_time is None:
+            if not trade_time:
                 if info.exchange.value in ("CFFEX", "SSE", "SZSE", "BSE"):
                     trade_time = self.FIN_TIME
                 elif info.exchange.value in ("SHFE", "DCE", "CZCE", "GFEX", "INE"):
@@ -1325,7 +1340,7 @@ class CtpTickClean:
                     self.ERROR(f"交易所无法识别: {info.exchange.value}，已默认使用全交易时间")
             else:
                 if isinstance(trade_time, list) and isinstance(trade_time[0], tuple):
-                    trade_time = trade_time[0]
+                    trade_time = trade_time
                 elif isinstance(trade_time, dict):
                     trade_time = [i for k in trade_time.values() for i in k if isinstance(i, tuple)]
                 if not trade_time:
@@ -1490,13 +1505,15 @@ def md_to_tick(md: Union[mdapi.CThostFtdcDepthMarketDataField, tdapi.CThostFtdcD
                 setattr(tick, k, np.nan)
     elif isinstance(md, (mdapi.CThostFtdcDepthMarketDataField, tdapi.CThostFtdcDepthMarketDataField)):
         # 获取变量
-        product = INSTRUMENT_INFO[md.InstrumentID].product
-        exchange = INSTRUMENT_INFO[md.InstrumentID].exchange.value
+        info = INSTRUMENT_INFO[md.InstrumentID]
+        product = info.product
+        exchange = info.exchange.value
+        ticker = info.ticker
         # 解析时间
-        action_day, action_datetime = combine_datetime(md.ActionDay, md.UpdateTime, md.UpdateMillisec)
+        action_day, action_datetime = combine_datetime(str(md.ActionDay), str(md.UpdateTime), str(md.UpdateMillisec))
         if not md.TradingDay and exchange == "SHFE":
             md.TradingDay = datetime.now().strftime("%Y%m%d")
-        trade_day = combine_datetime(md.TradingDay)
+        trade_day = combine_datetime(str(md.TradingDay))
         # 生成tick数据
         tick = TickData(ticktime=action_datetime,
                         tradeday=trade_day,
@@ -1520,7 +1537,8 @@ def md_to_tick(md: Union[mdapi.CThostFtdcDepthMarketDataField, tdapi.CThostFtdcD
                         openinterest=md.OpenInterest,
                         prevclose=adjust_price(md.PreClosePrice),
                         prevsettle=adjust_price(md.PreSettlementPrice),
-                        prevopeninterest=md.PreOpenInterest
+                        prevopeninterest=md.PreOpenInterest,
+                        ticker=ticker
                         )
         if md.BidVolume2 or md.AskVolume2:
             tick.bid2 = adjust_price(md.BidPrice2)
@@ -1548,7 +1566,8 @@ def md_to_tick(md: Union[mdapi.CThostFtdcDepthMarketDataField, tdapi.CThostFtdcD
 
 
 def tick_to_md(tick: TickData) -> dict:
-    """将TickData解析为csv存储格式"""
+    """将TickData解析为csv存储格式, ticktime调整为毫秒"""
     d = tick.__dict__
     d["ticktime"] = tick.ticktime.strftime("%Y%m%d %H:%M:%S") + f":{int(tick.ticktime.microsecond / 1000)}"
+    d = {k: v.value if isinstance(v, Enum) else v for (k, v) in d.items()}
     return d

@@ -54,7 +54,7 @@ class ThreadExecutor(BaseExecutor):
 
         envelope = TaskEnvelope.deserialize(task)
         task_id = envelope.task_id
-        func = import_func_from_path(envelope.func_path)
+        func = envelope.func
 
         try:
             result = func(*envelope.args, **{**envelope.kwargs, **get_context_kwargs()})

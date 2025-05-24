@@ -101,7 +101,7 @@ def _pool_worker(task):
     context = global_context()
     envelope = TaskEnvelope.deserialize(task)
     task_id = envelope.task_id
-    func = import_func_from_path(envelope.func_path)
+    func = import_func_from_path(envelope.func)
 
     t0 = time.time()
     proc = psutil.Process()

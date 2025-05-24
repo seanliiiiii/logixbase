@@ -13,7 +13,6 @@ BEGIN
         WHERE name = N''' + @table + ''' AND type = ''U''
     )
     BEGIN
-        DECLARE @createtable NVARCHAR(MAX) = ''
         CREATE TABLE [' + @db + '].[dbo].[' + @table + '] (
             [PK] INT NOT NULL IDENTITY (1, 1),
             [DateTime] DATETIME NOT NULL,
@@ -42,11 +41,8 @@ BEGIN
                 PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF,
                 ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON
             )
-        ) ON [PRIMARY]'';
+        ) ON [PRIMARY];
 
-        EXEC(@createtable);
-
-        DECLARE @createix NVARCHAR(MAX) = ''
         CREATE NONCLUSTERED INDEX [' + @table + '_1] ON [' + @db + '].[dbo].[' + @table + '] (DateTime)
         WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
 
@@ -70,9 +66,6 @@ BEGIN
 
         CREATE UNIQUE NONCLUSTERED INDEX [' + @table + '_8] ON [' + @db + '].[dbo].[' + @table + '] (TradeDay, DateTime, Ticker)
         WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = ON, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
-        '';
-
-        EXEC(@createix);
     END
     ';
 END
@@ -85,7 +78,6 @@ BEGIN
         WHERE name = N''' + @table + ''' AND type = ''U''
     )
     BEGIN
-        DECLARE @createtable NVARCHAR(MAX) = ''
         CREATE TABLE [' + @db + '].[dbo].[' + @table + '] (
             [PK] INT NOT NULL IDENTITY (1, 1),
             [DateTime] DATETIME NOT NULL,
@@ -113,11 +105,8 @@ BEGIN
                 PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF,
                 ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON
             )
-        ) ON [PRIMARY]'';
+        ) ON [PRIMARY];
 
-        EXEC(@createtable);
-
-        DECLARE @createix NVARCHAR(MAX) = ''
         CREATE UNIQUE NONCLUSTERED INDEX [' + @table + '_1] ON [' + @db + '].[dbo].[' + @table + '] (DateTime)
         WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = ON, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
 
@@ -132,9 +121,6 @@ BEGIN
 
         CREATE UNIQUE NONCLUSTERED INDEX [' + @table + '_5] ON [' + @db + '].[dbo].[' + @table + '] (TradeDay, DateTime)
         WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = ON, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
-        '';
-
-        EXEC(@createix);
     END;
 
     IF NOT EXISTS (
@@ -142,7 +128,6 @@ BEGIN
         WHERE name = N''' + @status_table + ''' AND type = ''U''
     )
     BEGIN
-        DECLARE @createstatus NVARCHAR(MAX) = ''
         CREATE TABLE [' + @db + '].[dbo].[' + @status_table + '] (
             [PK] INT NOT NULL IDENTITY (1, 1),
             [TradeDay] DATETIME NOT NULL,
@@ -153,19 +138,14 @@ BEGIN
                 PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF,
                 ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON
             )
-        ) ON [PRIMARY]'';
+        ) ON [PRIMARY];
 
-        EXEC(@createstatus);
-
-        DECLARE @ixstatus NVARCHAR(MAX) = ''
         CREATE UNIQUE NONCLUSTERED INDEX [' + @status_table + '_1] ON [' + @db + '].[dbo].[' + @status_table + '] (TradeDay)
         WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = ON, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
 
         CREATE NONCLUSTERED INDEX [' + @status_table + '_6] ON [' + @db + '].[dbo].[' + @status_table + '] (UpdateTime)
         WITH (STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY];
-        '';
-
-        EXEC(@ixstatus);
+        ;
     END
     ';
 END

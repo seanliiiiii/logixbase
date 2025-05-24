@@ -1,6 +1,7 @@
 import re
 import sys
 import numpy as np
+from datetime import datetime
 from typing import Union
 from decimal import Decimal
 
@@ -111,6 +112,25 @@ def ticker_to_instrument(ticker: str):
             calendar = parts[2][-formater[1]:]
             product = eval(f"parts[1].{formater[0]}()")
             return product + calendar
+        # Spread合约格式：exchange.product.calendar1&calendar2(跨期）exchange.product1&product2.calendar1&calendar2
+        elif "&" in parts[2] and int(len(parts[2].split("&")[1])) == 4:
+            formater = INSTRUMENT_FORMAT.get(exchange, None)
+            if not formater:
+                raise ValueError(f"期货交易所合约格式未定义")
+            products = parts[1].split("&")
+            calendars = parts[2].split("&")
+            instruments = []
+            for i, calendar_ in enumerate(calendars):
+                product_ = products[min(i, int(len(products)) - 1)]
+                instruments.append(product_ + calendar_[-formater[1]:])
+            instrument = "&".join(instruments)
+            # 添加套利合约标识
+            if exchange == "CZCE":
+                return "SPD " + instrument if int(len(products)) == 1 else "IPS " + instrument
+            elif exchange in ("DCE", "GFEX"):
+                return "SP " + instrument if int(len(products)) == 1 else "SPC " + instrument
+            else:
+                raise ValueError(f"未定义当前交易所 {exchange} 套利合约规则")
         else:
             raise ValueError(f"标准合约代码有误，无法转为交易所代码：{ticker}")
     else:
@@ -150,7 +170,7 @@ def ticker_to_product(ticker: str):
         raise ValueError(f"标准合约代码长度有误，无法转为交易所代码：{ticker}")
 
 
-def instrument_to_ticker(asset: str, exchange: str, instrument: str, deliver_year: Union[int, str] = None):
+def instrument_to_ticker(asset: str, exchange: str, instrument: str, deliver_year: Union[int, str, list] = None):
     """将交易所代码转为完整合约代码"""
     asset = asset.lower()
     exchange = exchange.upper()
@@ -171,6 +191,28 @@ def instrument_to_ticker(asset: str, exchange: str, instrument: str, deliver_yea
     elif asset in ("stock", "etf"):
         calendar = ''.join(re.findall(r'\d+', instrument))
         product = "STK" if asset == "stock" else "ETF"
+    elif asset == "spread":
+        spread = instrument.split(" ")[1]
+        spread_instru = spread.replace(" ", "").split("&")
+        products = instrument_to_product(asset, instrument).split("&")
+        formater = INSTRUMENT_FORMAT.get(exchange, None)
+        if not formater:
+            raise ValueError(f"交易所合约代码规则未定义：{exchange}")
+        calendar = []
+        for (i, instru_) in enumerate(spread_instru):
+            product_ = products[min(i, int(len(products)) - 1)]
+            calendar_ = instru_.lstrip(product_)
+            # 补全日历至4位
+            if formater[1] != 4:
+                if deliver_year:
+                    year = deliver_year if isinstance(deliver_year, (int, str)) else deliver_year[min(i, int(len(products)) - 1)]
+                    decade = str(year)[2]
+                else:
+                    decade = str(datetime.now().year)[2]
+                calendar_ = decade + calendar_[-3:]
+            calendar.append(calendar_)
+        calendar = "&".join(calendar)
+        product = "&".join(products)
     elif asset == "index":
         product = "IDX"
         calendar = instrument
@@ -192,13 +234,13 @@ def instrument_to_product(asset: str, instrument: str):
             return ''.join(match)
         else:
             return instrument
-    elif asset == "combination":
+    elif asset == "spread":
         # 价差合约
         tag, symbol = instrument.split(" ", 1)
         symbols = symbol.split("&")
         matches = [re.search(r"[a-zA-Z]+", k) for k in symbols]
-        products = [k.group(0) for k in matches]
-        return tag + " " + "&".join(products)
+        products = set([k.group(0) for k in matches])
+        return "&".join(products)
     elif asset in ("stock", "etf"):
         return ''.join(re.findall(r'\d+', instrument))
     elif asset == "option":

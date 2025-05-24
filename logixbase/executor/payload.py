@@ -6,16 +6,16 @@ class TaskEnvelope(SerializeProtocol):
     标准任务封装结构：
     用于封装 func 路径、args、kwargs，支持跨进程传输、插件通信、UI 请求等。
     """
-    def __init__(self, task_id: str, func_path: str, args=None, kwargs=None):
+    def __init__(self, task_id: str, func: str, args=None, kwargs=None):
         self.task_id: str = task_id
-        self.func_path = func_path  # e.g. 'logixsignal.tasks.run_signal'
+        self.func = func  # e.g. 'logixsignal.tasks.run_signal'
         self.args = args or []
         self.kwargs = kwargs or {}
 
     def serialize(self) -> dict:
         return {
             "task_id": self.task_id,
-            "func_path": self.func_path,
+            "func": self.func,
             "args": self.args,
             "kwargs": self.kwargs,
         }
@@ -24,7 +24,7 @@ class TaskEnvelope(SerializeProtocol):
     def deserialize(cls, data: dict):
         return cls(
             task_id=data["task_id"],
-            func_path=data["func_path"],
+            func=data["func"],
             args=data.get("args", []),
             kwargs=data.get("kwargs", {})
         )

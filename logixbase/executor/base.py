@@ -118,8 +118,9 @@ class BaseExecutor(ABC, OPP, IDP):
         name = task_name or func.__name__
         task_id = self._gen_task_id(name)
 
-        func_path = f"{getattr(func, '__module__', 'unknown')}.{getattr(func, '__name__', 'anonymous')}"
-        envelope = TaskEnvelope(task_id=task_id, func_path=func_path, args=args, kwargs=kwargs)
+        if self.mode != "thread":
+            func = f"{getattr(func, '__module__', 'unknown')}.{getattr(func, '__name__', 'anonymous')}"
+        envelope = TaskEnvelope(task_id=task_id, func=func, args=args, kwargs=kwargs)
 
         self.task_id_map[task_id] = (name, func)
         self.tasks.append(envelope.serialize())

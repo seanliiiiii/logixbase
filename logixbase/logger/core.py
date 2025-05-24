@@ -76,6 +76,7 @@ class LogManager(OPP, IDP):
 
     def start(self):
         if not self.__started:
+            self.log_writer.stop_event.clear()
             self.log_writer.start()
             self.__started = True
             self.log("INFO", "日志管理器已启动")
