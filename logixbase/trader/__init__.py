@@ -1,6 +1,6 @@
 from .config import EXCHANGE_MAP, PRODUCT_NAME_MAP, INSTRUMENT_FORMAT
 from .constant import (Direction, Offset, Status, Asset, OrderType, OptionType, StopOrderStatus, Exchange, Currency,
-                       ModelMode, Interval)
+                       ModelMode, Interval, FutureSpread)
 from .schema import (FutureInfo, OptionInfo, StockInfo, IndexInfo, EtfInfo, QmFactorInfo, EdbInfo, BarData,
                      TickData, AccountInfo, AccountPosition, OrderData, StopOrder, TradeData)
 from .tool import StrategyTemplate, BarGenerator, TickArrayManager, BarArrayManager, adjust_econ_data, season_adj, EdbArrayManager
@@ -22,6 +22,7 @@ __all__ = ['EXCHANGE_MAP',
            'ModelMode',
            'Interval',
            'OptionType',
+           'FutureSpread',
 
             'FutureInfo',
            'OptionInfo',

@@ -71,7 +71,6 @@ class DynamicData:
             setattr(self, k, v)
 
 
-
 mdapi = import_api("thostmduserapi")
 tdapi = import_api("thosttraderapi")
 
