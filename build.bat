@@ -53,6 +53,6 @@ if %errorlevel% neq 0 (
 echo.
 
 :end
-echo [SUCCESS] Completed: Git pushed to master and version branch, and uploaded to PyPI (if new).
+echo [SUCCESS] Completed: uploaded to PyPI (if new).
 pause
 endlocal

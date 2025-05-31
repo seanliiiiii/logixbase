@@ -18,7 +18,7 @@ import pandas as pd
 from enum import Enum
 
 from ..trader import (AccountInfo, AccountPosition, TickData, adjust_price, round_to, FutureInfo, OptionInfo,
-                      ticker_to_instrument, instrument_to_ticker, instrument_to_product)
+                      instrument_to_ticker, instrument_to_product)
 from ..utils import unify_time, ProcessBar, all_tradeday, all_calendar
 
 from .base import BaseGateway
