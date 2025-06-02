@@ -4,6 +4,7 @@ import numpy as np
 from datetime import datetime
 from typing import Union
 from decimal import Decimal
+from collections import OrderedDict
 
 from ..utils import unify_time
 from .config import PRODUCT_NAME_MAP, INSTRUMENT_FORMAT
@@ -211,8 +212,8 @@ def instrument_to_ticker(asset: str, exchange: str, instrument: str, deliver_yea
                     decade = str(datetime.now().year)[2]
                 calendar_ = decade + calendar_[-3:]
             calendar.append(calendar_)
-        calendar = "&".join(calendar)
-        product = "&".join(products)
+        calendar = "&".join(dedup_keep_order(calendar))
+        product = "&".join(dedup_keep_order(products))
     elif asset == "index":
         product = "IDX"
         calendar = instrument
@@ -239,7 +240,7 @@ def instrument_to_product(asset: str, instrument: str):
         tag, symbol = instrument.split(" ", 1)
         symbols = symbol.split("&")
         matches = [re.search(r"[a-zA-Z]+", k) for k in symbols]
-        products = set([k.group(0) for k in matches])
+        products = list(dedup_keep_order([k.group(0) for k in matches]))
         return "&".join(products)
     elif asset in ("stock", "etf"):
         return ''.join(re.findall(r'\d+', instrument))
@@ -247,6 +248,10 @@ def instrument_to_product(asset: str, instrument: str):
         raise ValueError("期权代码转换未定义")
     else:
         return instrument
+
+
+def dedup_keep_order(lst):
+    return list(OrderedDict.fromkeys(lst))
 
 
 def round_to(value: float, target: float) -> float:
