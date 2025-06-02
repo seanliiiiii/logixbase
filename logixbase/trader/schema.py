@@ -1,5 +1,5 @@
 from dataclasses import field, dataclass
-from typing import Any, Union
+from typing import Any
 
 from pydantic import BaseModel
 from datetime import datetime
@@ -49,7 +49,7 @@ class FutureInfo(BaseModel):
 
     def model_post_init(self, __context: Any) -> None:
         dl_day = self.delistdate or self.deliverdate
-        if dl_day and int(len(str(dl_day))) >= 4:
+        if not self.ticker and dl_day and int(len(str(dl_day))) >= 4:
             self.ticker = instrument_to_ticker(self.asset.value, self.exchange.value,
                                                self.instrument, str(self.delistdate)[:4])
 
@@ -84,7 +84,7 @@ class OptionInfo(BaseModel):
 
     def model_post_init(self, __context: Any) -> None:
         dl_day = self.delistdate or self.deliverdate
-        if dl_day and int(len(str(dl_day))) >= 4:
+        if not self.ticker and dl_day and int(len(str(dl_day))) >= 4:
             self.ticker = instrument_to_ticker(self.asset.value, self.exchange.value,
                                                self.instrument, str(self.delistdate)[:4])
 
@@ -117,7 +117,8 @@ class StockInfo(BaseModel):
     comm_closetoday_pct: float = 0.00015                  # 平今浮动平仓手续费
 
     def model_post_init(self, __context: Any) -> None:
-        self.ticker = instrument_to_ticker(self.asset.value, self.exchange.value, self.instrument)
+        if not self.ticker:
+            self.ticker = instrument_to_ticker(self.asset.value, self.exchange.value, self.instrument)
 
 
 class IndexInfo(BaseModel):
@@ -134,7 +135,8 @@ class IndexInfo(BaseModel):
     class_level2: str = ""                      # 二级指数分类
 
     def model_post_init(self, __context: Any) -> None:
-        self.ticker = instrument_to_ticker(self.asset.value, self.exchange.value, self.instrument)
+        if not self.ticker:
+            self.ticker = instrument_to_ticker(self.asset.value, self.exchange.value, self.instrument)
 
 
 class EtfInfo(BaseModel):
@@ -159,7 +161,8 @@ class EtfInfo(BaseModel):
     comm_closetoday_pct: float = 0.0003                  # 平今浮动平仓手续费
 
     def model_post_init(self, __context: Any) -> None:
-        self.ticker = instrument_to_ticker(self.asset.value, self.exchange.value, self.instrument)
+        if not self.ticker:
+            self.ticker = instrument_to_ticker(self.asset.value, self.exchange.value, self.instrument)
 
 
 class QmFactorInfo(BaseModel):
@@ -218,7 +221,7 @@ class BarData:
 
     def __post_init__(self):
         """"""
-        if self.instrument is None:
+        if not self.instrument:
             self.instrument = ticker_to_instrument(self.ticker)
 
 
@@ -439,7 +442,7 @@ class StopOrder(BaseModel):
 
     def model_post_init(self, _context = None):
         """"""
-        if self.instrument is None:
+        if not self.instrument:
             self.instrument = ticker_to_instrument(self.ticker)
 
 
@@ -463,5 +466,5 @@ class TradeData(BaseModel):
 
     def model_post_init(self, _context = None):
         """"""
-        if self.instrument is None:
+        if not self.instrument:
             self.instrument = ticker_to_instrument(self.ticker)

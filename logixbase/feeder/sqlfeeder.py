@@ -20,20 +20,18 @@ class SqlServerFeeder(BaseFeeder):
     Sql Server 数据库接口
     """
 
-    def __init__(self, conn_cfg: DatabaseConfig, logger = None):
+    def __init__(self, conn_cfg: DatabaseConfig, logger=None):
         if isinstance(conn_cfg, dict):
             conn_cfg = DatabaseConfig(**conn_cfg)
         super().__init__("SqlServer", conn_cfg, logger)
         self._api: Union[DealWithSql, None] = None
 
-        self._exchange: dict = {}
         self._edb: dict = {}
 
         self.on_init()
 
     def on_init(self):
         cfg = read_config(LOCAL_DIR / "config/database.yaml")
-        self._exchange = cfg["exchange"]["map"]
         self._edb = cfg["edb"]["map"]
 
     def connect(self):
@@ -86,7 +84,7 @@ class SqlServerFeeder(BaseFeeder):
         self.INFO(f"行情数据已保存至本地csv: 共计{int(len(tickers))}个文件")
 
     def all_tradeday(self, start: Union[str, datetime, int], end: Union[str, datetime, int], fmt: str = "datetime",
-                      freq: str = "D", day: int = 1, market: str = "China"):
+                     freq: str = "D", day: int = 1, market: str = "China"):
 
         start_sql = unify_time(start, fmt="str", mode=3, dot="")
         end_sql = unify_time(end, fmt="str", mode=3, dot="")
@@ -253,7 +251,6 @@ class SqlServerFeeder(BaseFeeder):
         if active:
             query += " WHERE [Status] = 'Listed'"
         data = self._api.exec_query(query)
-        data["Exchange"] = data["Exchange"].map(self._exchange)
         mask = data["Exchange"].isna()
         data.loc[mask, "Exchange"] = data.loc[mask, "Ticker"].map(lambda x: parse_exchange("stock", x))
         data = data.to_dict(orient="records")
@@ -263,7 +260,6 @@ class SqlServerFeeder(BaseFeeder):
     def index_ticker(self):
         query = f"SELECT DISTINCT [Ticker], [Exchange] FROM [INDEX_RESEARCH_DAILY].[dbo].[INDEXINFO_BASIC]"
         data = self._api.exec_query(query)
-        data["Exchange"] = data["Exchange"].map(lambda x: self._exchange.get(x, x))
         data = data.to_dict(orient="records")
         data = [instrument_to_ticker("index", k["Exchange"], k["Ticker"]) for k in data]
         return sorted(data)
@@ -271,7 +267,6 @@ class SqlServerFeeder(BaseFeeder):
     def etf_ticker(self):
         query = f"SELECT DISTINCT [Ticker], [Exchange] FROM [ETF_RESEARCH_DAILY].[dbo].[ETFINFO_BASIC]"
         data = self._api.exec_query(query)
-        data["Exchange"] = data["Exchange"].map(self._exchange)
         data = data.to_dict(orient="records")
         data = [instrument_to_ticker("etf", k["Exchange"], k["Ticker"]) for k in data]
         return sorted(data)
@@ -327,7 +322,8 @@ class SqlServerFeeder(BaseFeeder):
             product_lst, ticker_lst = parse_ticker("future", ticker)
             query_all = []
             if product_lst:
-                query_all.append(query + f" WHERE [Product] in ({str(set([x.split('_')[0] for x in product_lst]))[1:-1]})")
+                query_all.append(
+                    query + f" WHERE [Product] in ({str(set([x.split('_')[0] for x in product_lst]))[1:-1]})")
             if ticker_lst:
                 query_all.append(query + f" WHERE [Ticker] in ({str(set(ticker_lst))[1:-1]})")
             query = " UNION ALL ".join(query_all)
@@ -375,7 +371,6 @@ class SqlServerFeeder(BaseFeeder):
             ticker_lst = parse_ticker("index", ticker)[1]
             query += f"WHERE [Ticker] in ({str(set(ticker_lst))[1:-1]})"
         data = self._api.exec_query(query)
-        data["Exchange"] = data["ExgSymbol"].map(lambda x: self._exchange.get(x, x))
         return data
 
     def option_info_basic(self, ticker: list = None, underlying: list = None):
@@ -424,7 +419,8 @@ class SqlServerFeeder(BaseFeeder):
                 trade_info = trade_info.loc[:, ["Ticker", "Product", "ExecDate", "OpenCommission_Pct",
                                                 "OpenCommission_Fix", "CloseCommission_Pct", "CloseCommission_Fix",
                                                 "IntradayCloseCommission_Pct", "IntradayCloseCommission_Fix"]]
-                fill = trade_info.sort_values("ExecDate").groupby("Product", as_index=False).tail(1).set_index("Product")
+                fill = trade_info.sort_values("ExecDate").groupby("Product", as_index=False).tail(1).set_index(
+                    "Product")
                 col_to_fill = ["OpenCommission_Pct", "OpenCommission_Fix", "CloseCommission_Pct",
                                "CloseCommission_Fix", "IntradayCloseCommission_Pct", "IntradayCloseCommission_Fix"]
                 info = pd.merge(info, trade_info.drop(columns=["Product"]), on="Ticker", how="left")
@@ -465,7 +461,8 @@ class SqlServerFeeder(BaseFeeder):
             info["asset"] = "index"
             info["ListDate"] = info["ListDate"].map(lambda x: x.strftime("%Y%m%d")).astype(int)
             info.columns = info.columns.str.lower()
-            info = info.rename(columns={"indexclass1": "class_level1", 'indexclass2': "class_level2", "ticker": "instrument"})
+            info = info.rename(
+                columns={"indexclass1": "class_level1", 'indexclass2': "class_level2", "ticker": "instrument"})
             info_list = info.fillna("").to_dict(orient="records")
             info_list = [IndexInfo(**k) for k in info_list]
             return {k.ticker: k for k in info_list}
@@ -523,7 +520,7 @@ class SqlServerFeeder(BaseFeeder):
                           FROM [FUTURE_RESEARCH_DAILY].[dbo].[FUTUREMainTicker_Calendar]
                           WHERE [TradeDay] >= '{start_}' AND [TradeDay] <= '{end_}'
                           {f"AND [Product] + '_' + [Calendar] IN ({str(calendar_product)[1:-1]})"
-                            if calendar_product else ''} 
+        if calendar_product else ''} 
                           """
 
         if (raw_product and calendar_product) or (not ticker):
@@ -542,7 +539,8 @@ class SqlServerFeeder(BaseFeeder):
         data["Instrument"] = data["Ticker"].map(instrument)
         data["Exchange"] = data["Ticker"].map(exchange)
         data["Product_"] = data["Instrument"].map(lambda x: instrument_to_product("future", x))
-        data["Product"] = data["Exchange"] + "." + data["Product_"] + "." + data["Product"].map(lambda x: x.split('.')[1])
+        data["Product"] = data["Exchange"] + "." + data["Product_"] + "." + data["Product"].map(
+            lambda x: x.split('.')[1])
 
         return data.loc[:, ["TradeDay", "Product", "Ticker", "Instrument"]]
 
@@ -609,7 +607,7 @@ class SqlServerFeeder(BaseFeeder):
                 hots = [k + "_HOT" if "_" not in k else k for k in product]
             else:
                 if raws:
-                    query_all.append(query % "[Product]" + f" AND [Product] in ({str(raws)[1:-1]})" )
+                    query_all.append(query % "[Product]" + f" AND [Product] in ({str(raws)[1:-1]})")
                 if ticker_lst:
                     query_all.append(query % "[Ticker]" + f" AND [Ticker] in ({str(ticker_lst)[1:-1]})")
 
@@ -654,10 +652,12 @@ class SqlServerFeeder(BaseFeeder):
             data = self._api.exec_query(query)
             # 调整数据格式
             data["Ticker"] = data["Ticker"].map(lambda x: x.replace("_", "."))
-            data["Ticker"] = data["Ticker"].map(lambda x: x[:-4] + "." + x[-4:] if x[-4:].isdigit() and x[:-4].isalpha() else x)
+            data["Ticker"] = data["Ticker"].map(
+                lambda x: x[:-4] + "." + x[-4:] if x[-4:].isdigit() and x[:-4].isalpha() else x)
             data["Ticker"] = data["Ticker"].map(lambda x: x.split(".")[-1] if "." in x else "")
-            data["Ticker"] = (data["Exchange"] + "." + data["Instrument"].map(lambda x: instrument_to_product("future", x))
-                              + "." + data["Ticker"]).map(lambda x: x.rstrip("."))
+            data["Ticker"] = (
+                        data["Exchange"] + "." + data["Instrument"].map(lambda x: instrument_to_product("future", x))
+                        + "." + data["Ticker"]).map(lambda x: x.rstrip("."))
             return data
         else:
             self.ERROR(f"期货日线数据查询失败: {ticker}")
@@ -753,10 +753,12 @@ class SqlServerFeeder(BaseFeeder):
             data = self._api.exec_query(query)
             # 调整数据格式
             data["Ticker"] = data["Ticker"].map(lambda x: x.replace("_", "."))
-            data["Ticker"] = data["Ticker"].map(lambda x: x[:-4] + "." + x[-4:] if x[-4:].isdigit() and x[:-4].isalpha() else x)
+            data["Ticker"] = data["Ticker"].map(
+                lambda x: x[:-4] + "." + x[-4:] if x[-4:].isdigit() and x[:-4].isalpha() else x)
             data["Ticker"] = data["Ticker"].map(lambda x: x.split(".")[-1] if "." in x else "")
-            data["Ticker"] = (data["Exchange"] + "." + data["Instrument"].map(lambda x: instrument_to_product("future", x))
-                              + "." + data["Ticker"]).map(lambda x: x.rstrip("."))
+            data["Ticker"] = (
+                        data["Exchange"] + "." + data["Instrument"].map(lambda x: instrument_to_product("future", x))
+                        + "." + data["Ticker"]).map(lambda x: x.rstrip("."))
             return data
         else:
             self.ERROR(f"期货数据库不存在: {interval} | {ticker}")
@@ -774,7 +776,7 @@ class SqlServerFeeder(BaseFeeder):
                 DECLARE @StartDay DATE = '{start}';
                 DECLARE @EndDay DATE = '{end}';
                 DECLARE @WindowSize INT = {Interval(interval).window};
-                
+
                 DECLARE @PrevDay DATE = (
                     SELECT MAX([Date])
                     FROM (
@@ -784,10 +786,10 @@ class SqlServerFeeder(BaseFeeder):
                     ) x
                 );
                 IF @PrevDay IS NULL SET @PrevDay = @StartDay;
-                
+
                 DECLARE @baseDataSourceSql NVARCHAR(MAX) = N'';
                 DECLARE @baseDataDelimiter NVARCHAR(100) = N' UNION ALL ';
-                
+
                 SELECT @baseDataSourceSql = STRING_AGG(
                     N'SELECT [DateTime], [TradeDay], [Ticker], [Open], [High], [Low], [Close], [PrevClose],
                              [Volume], [Amount], [OpenInterest]
@@ -815,13 +817,13 @@ class SqlServerFeeder(BaseFeeder):
                          OR (@RawProductList IS NOT NULL AND @RawProductList <> '' AND Product IN (SELECT value FROM STRING_SPLIT(@RawProductList, ','))) )
                       AND TradeDay BETWEEN @PrevDay AND @EndDay
                 ) AS AllInput;
-                
+
                 IF @baseDataSourceSql IS NULL OR @baseDataSourceSql = N''
                 BEGIN
                     PRINT N'错误: 无可用行情表。';
                     RETURN;
                 END
-                
+
                 DECLARE @sql NVARCHAR(MAX) = N'
                 WITH MainTickers AS (
                     SELECT [TradeDay], [Ticker], (Product + ''.HOT'') AS [Product], CAST(EXP(SUM(LOG(CoefAdj + 1)) 
@@ -910,7 +912,7 @@ class SqlServerFeeder(BaseFeeder):
                 MainMerged AS (
                     SELECT K.DateTime, M.TradeDay, M.Product AS [Ticker], K.Product_Raw AS [Product], K.Exchange, K.Instrument,
                         K.[Open], K.[High], K.[Low], K.[Close], K.[PrevClose], K.Settle, ISNULL(K.PrevSettle, K.[Open]) AS PrevSettle,
-                        K.Volume, K.Amount, K.OpenInterest, K.CoefAdj, K.BarCount
+                        K.Volume, K.Amount, K.OpenInterest, CAST(K.CoefAdj AS FLOAT) AS [CoefAdj], K.BarCount
                     FROM FinalWithPrevSettle K
                     INNER JOIN MainTickers M ON K.TradeDay = M.TradeDay AND K.Ticker = M.Ticker
                 )
@@ -935,7 +937,8 @@ class SqlServerFeeder(BaseFeeder):
 
         # 调整数据格式
         data["Ticker"] = data["Ticker"].map(lambda x: x.replace("_", "."))
-        data["Ticker"] = data["Ticker"].map(lambda x: x[:-4] + "." + x[-4:] if x[-4:].isdigit() and x[:-4].isalpha() else x)
+        data["Ticker"] = data["Ticker"].map(
+            lambda x: x[:-4] + "." + x[-4:] if x[-4:].isdigit() and x[:-4].isalpha() else x)
         data["Ticker"] = data["Ticker"].map(lambda x: x.split(".")[-1] if "." in x else "")
         data["Ticker"] = (data["Exchange"] + "." + data["Instrument"].map(lambda x: instrument_to_product("future", x))
                           + "." + data["Ticker"]).map(lambda x: x.rstrip("."))
@@ -987,7 +990,6 @@ class SqlServerFeeder(BaseFeeder):
               """
 
         data = self._api.exec_query(query)
-        data["Exchange"] = data["Exchange"].map(self._exchange)
         data["Ticker"] = data["Exchange"] + "." + data["Product"] + "." + data["Instrument"]
         return data
 
@@ -1003,32 +1005,31 @@ class SqlServerFeeder(BaseFeeder):
 
         data = pd.DataFrame()
         for i in range(0, int(len(ticker_lst)), 500):
-            ticker_lst_ = ticker_lst[i:i+500]
+            ticker_lst_ = ticker_lst[i:i + 500]
 
             if not self._check_db_exist(db=f"STOCK_RESEARCH_{interval}"):
                 self.INFO(f"[{self._name}] [INFO] 股票{interval}数据库不存在，切换为主动合成")
                 return self._general_bar_generator("Stock", start_, end_, interval, ticker_lst_)
-
 
             query = f"""
                     DECLARE @InstrumentList NVARCHAR(MAX) = '{",".join(ticker_lst_)}';
                     DECLARE @StartDay DATE = '{start_}';
                     DECLARE @EndDay DATE = '{end_}';
                     DECLARE @db NVARCHAR(100) = 'STOCK_RESEARCH_{interval}';
-    
+
                     DECLARE @PrevDay DATE;
                     SELECT @PrevDay = MAX([Date])
                     FROM [FUTURE_RESEARCH_DAILY].[dbo].[AssetTradeDate_UTCGMT8]
                     WHERE China = 1 AND [Date] < @StartDay;
-    
+
                     DECLARE @PrevDayStr NVARCHAR(10) = CONVERT(NVARCHAR(10), @PrevDay, 23);
                     DECLARE @StartDayStr NVARCHAR(10) = CONVERT(NVARCHAR(10), @StartDay, 23);
                     DECLARE @EndDayStr NVARCHAR(10) = CONVERT(NVARCHAR(10), @EndDay, 23);
-    
+
                     DECLARE @sql NVARCHAR(MAX) = N'';
                     DECLARE @individualSQL NVARCHAR(MAX);
                     DECLARE @delimiter NVARCHAR(100) = CHAR(13) + CHAR(10) + 'UNION ALL' + CHAR(13) + CHAR(10);
-    
+
                     SELECT @individualSQL = STRING_AGG(CAST(
                         '
                         SELECT *, ''' + T.Ticker + ''' AS [Ticker], ''' + T.[Ticker] + ''' AS Instrument,
@@ -1045,12 +1046,12 @@ class SqlServerFeeder(BaseFeeder):
                         )
                     )
                     AND OBJECT_ID('[' + @db + '].[dbo].[' + T.Ticker + ']', 'U') IS NOT NULL;
-    
+
                     SET @sql = '
                     WITH AllDataWithSettle AS (
                     ' + @individualSQL + '
                     ),
-                    
+
                     ADDPREV AS (
                         SELECT *,
                                LAG(Settle) OVER (
@@ -1113,7 +1114,7 @@ class SqlServerFeeder(BaseFeeder):
                             ) AS CoefAdj
                         FROM CoefJoined
                     )
-                    
+
                     SELECT W.[DateTime],W.[TradeDay], W.[Ticker], ''' + 'STK' + ''' AS [Product],[Exchange],[Instrument],
                             [Open],[High],[Low],[Close],[PrevClose],[Settle],[PrevSettle],[Volume],
                             [Amount],[DealNumber],[Committee],[QuantityRelative],[BuyVolume],[BuyAmount],[SaleVolume],
@@ -1129,7 +1130,6 @@ class SqlServerFeeder(BaseFeeder):
                     """
             data_ = self._api.exec_query(query)
             data = pd.concat([data, data_])
-        data["Exchange"] = data["Exchange"].map(self._exchange)
         data["Ticker"] = data["Exchange"] + "." + data["Product"] + "." + data["Instrument"]
         return data
 
@@ -1143,16 +1143,16 @@ class SqlServerFeeder(BaseFeeder):
                 DECLARE @StartDay DATE = '{start}';
                 DECLARE @EndDay DATE = '{end}';
                 DECLARE @WindowSize INT = {Interval(interval).window};
-                
+
                 DECLARE @PrevDay DATE = (
                     SELECT MAX([Date])
                     FROM [FUTURE_RESEARCH_DAILY].[dbo].[AssetTradeDate_UTCGMT8]
                     WHERE [Date] < @StartDay AND [China] = 1
                 );
                 IF @PrevDay IS NULL SET @PrevDay = @StartDay;
-                
+
                 IF OBJECT_ID('tempdb..#TickerMap') IS NOT NULL DROP TABLE #TickerMap;
-                
+
                 SELECT DISTINCT
                     [Ticker],
                     [Ticker] AS [Instrument],
@@ -1164,10 +1164,10 @@ class SqlServerFeeder(BaseFeeder):
                     FROM STRING_SPLIT(@InstrumentList, ',')
                 )
                 AND Ticker IS NOT NULL;
-                
+
                 DECLARE @baseDataSql NVARCHAR(MAX);
                 DECLARE @delimiter VARCHAR(100) = CHAR(13) + CHAR(10) + 'UNION ALL' + CHAR(13) + CHAR(10);
-                
+
                 SELECT @baseDataSql = STRING_AGG(
                     'SELECT
                         [DateTime], [TradeDay],
@@ -1183,13 +1183,13 @@ class SqlServerFeeder(BaseFeeder):
                     @delimiter
                 )
                 FROM #TickerMap;
-                
+
                 IF @baseDataSql IS NULL OR @baseDataSql = N''
                 BEGIN
                     PRINT N'无匹配股票数据表';
                     RETURN;
                 END;
-                
+
                 DECLARE @sql NVARCHAR(MAX) = N'
                 WITH BaseData AS (
                 ' + @baseDataSql + N'
@@ -1286,7 +1286,7 @@ class SqlServerFeeder(BaseFeeder):
                         ) AS AdjFactor
                     FROM CoefJoined
                 )
-                
+
                 SELECT
                     W.[DateTime], W.[TradeDay], W.[Ticker], ''' + '{asset_tag[asset.lower()]}' + ''' AS [Product], W.[Exchange], W.[Instrument],
                     W.[Open], W.[High], W.[Low], W.[Close],
@@ -1303,7 +1303,7 @@ class SqlServerFeeder(BaseFeeder):
                 ORDER BY W.DateTime
                 OPTION (MAXRECURSION 0);
                 ';
-                
+
                 EXEC sp_executesql
                     @sql,
                     N'@StartDay DATE, @EndDay DATE, @PrevDay DATE, @WindowSize INT',
@@ -1315,7 +1315,6 @@ class SqlServerFeeder(BaseFeeder):
         data = self._api.exec_query(query)
 
         # 调整数据格式
-        data["Exchange"] = data["Exchange"].map(self._exchange)
         data["Ticker"] = data["Exchange"] + "." + data["Product"] + "." + data["Instrument"]
         return data
 
@@ -1365,7 +1364,6 @@ class SqlServerFeeder(BaseFeeder):
               """
 
         data = self._api.exec_query(query)
-        data["Exchange"] = data["Exchange"].map(self._exchange)
         data["Ticker"] = data["Exchange"] + "." + data["Product"] + "." + data["Instrument"]
         return data
 
@@ -1447,7 +1445,6 @@ class SqlServerFeeder(BaseFeeder):
                     """
             data_ = self._api.exec_query(query)
             data = pd.concat([data, data_])
-        data["Exchange"] = data["Exchange"].map(self._exchange)
         data["Ticker"] = data["Exchange"] + "." + data["Product"] + "." + data["Instrument"]
         return data
 
@@ -1467,24 +1464,26 @@ class SqlServerFeeder(BaseFeeder):
                 IF @PrevDay IS NULL SET @PrevDay = @StartDay;
 
                 IF OBJECT_ID('tempdb..#TickerMap') IS NOT NULL DROP TABLE #TickerMap;
-                
+
                 SELECT DISTINCT
                     Ticker,
+                    Ticker AS [Instrument],
                     Exchange
                 INTO #TickerMap
                 FROM [INDEX_RESEARCH_DAILY].[dbo].[IndexInfo_Basic]
                 WHERE Ticker IN (
                     SELECT TRIM(value) FROM STRING_SPLIT(@TickerList, ',')
                 );
-                
+
                 DECLARE @baseDataSql NVARCHAR(MAX);
                 DECLARE @delimiter VARCHAR(100) = CHAR(13) + CHAR(10) + 'UNION ALL' + CHAR(13) + CHAR(10);
-                
+
                 SELECT @baseDataSql = STRING_AGG(
                     'SELECT
                         [DateTime], [TradeDay],
                         ''' + Ticker + ''' AS [Ticker],
                         ''' + Exchange + ''' AS [Exchange],
+                        ''' + Instrument + ''' AS [Instrument],
                         [Open], [High], [Low], [Close], [PrevClose],
                         [Volume], [Amount], [DealNumber], [Committee], [QuantityRelative],
                         [BuyVolume], [BuyAmount], [SaleVolume], [SaleAmount],
@@ -1494,13 +1493,13 @@ class SqlServerFeeder(BaseFeeder):
                     @delimiter
                 )
                 FROM #TickerMap;
-                
+
                 IF @baseDataSql IS NULL OR @baseDataSql = ''
                 BEGIN
                     PRINT N'⚠ 无匹配指数分钟线数据表';
                     RETURN;
                 END;
-                
+
                 DECLARE @sql NVARCHAR(MAX) = N'
                 WITH BaseData AS (
                 ' + @baseDataSql + N'
@@ -1525,7 +1524,7 @@ class SqlServerFeeder(BaseFeeder):
                 ),
                 Aggregated AS (
                     SELECT
-                        Ticker, Exchange, TradeDay, MAX(DateTime) AS DateTime, COUNT(*) AS BarCount,
+                        Ticker, Instrument, Exchange, TradeDay, MAX(DateTime) AS DateTime, COUNT(*) AS BarCount,
                         MAX(High) AS High, MIN(Low) AS Low, SUM(Volume) AS Volume, SUM(Amount) AS Amount,
                         SUM(DealNumber) AS DealNumber,
                         SUM(BuyVolume) AS BuyVolume, SUM(BuyAmount) AS BuyAmount,
@@ -1546,16 +1545,16 @@ class SqlServerFeeder(BaseFeeder):
                             END, 2
                         ) AS Settle
                     FROM WithOHLC
-                    GROUP BY Ticker, Exchange, TradeDay, GroupID
+                    GROUP BY Ticker, Instrument, Exchange, TradeDay, GroupID
                 ),
                 WithPrev AS (
                     SELECT *,
                         ROUND(LAG(Settle) OVER (PARTITION BY Ticker ORDER BY TradeDay, DateTime), 2) AS PrevSettle
                     FROM Aggregated
                 )
-                
+
                 SELECT
-                    W.[DateTime], W.[TradeDay], W.[Ticker], ''' + 'IDX' + ''' AS [Product],
+                    W.[DateTime], W.[TradeDay], W.[Ticker], W.[Instrument], ''' + 'IDX' + ''' AS [Product],
                     W.[Exchange],
                     W.[Open], W.[High], W.[Low], W.[Close],
                     W.[PrevClose], W.[Settle], W.[PrevSettle],
@@ -1580,12 +1579,11 @@ class SqlServerFeeder(BaseFeeder):
                 """
         data = self._api.exec_query(query)
         # 调整数据格式
-        data["Exchange"] = data["Exchange"].map(self._exchange)
         data["Ticker"] = data["Exchange"] + "." + data["Product"] + "." + data["Ticker"]
         return data
 
     def etf_quote_daily(self, start: Union[datetime, str, int], end: Union[datetime, str, int],
-                          ticker: Union[list, tuple] = None):
+                        ticker: Union[list, tuple] = None):
         # 统一日期格式
         start_ = unify_time(start, fmt="str", mode=3, dot="")
         end_ = unify_time(end, fmt="str", mode=3, dot="")
@@ -1629,7 +1627,6 @@ class SqlServerFeeder(BaseFeeder):
               """
 
         data = self._api.exec_query(query)
-        data["Exchange"] = data["Exchange"].map(self._exchange)
         data["Ticker"] = data["Exchange"] + "." + data["Product"] + "." + data["Instrument"]
         return data
 
@@ -1710,13 +1707,13 @@ class SqlServerFeeder(BaseFeeder):
                     """
             data_ = self._api.exec_query(query)
             data = pd.concat([data, data_])
-        data["Exchange"] = data["Exchange"].map(self._exchange)
         data["Ticker"] = data["Exchange"] + "." + data["Product"] + "." + data["Instrument"]
         return data
 
     def option_quote_daily(self, start: Union[datetime, str, int], end: Union[datetime, str, int],
                            ticker: Union[list, tuple] = None):
         pass
+
     def option_quote_min(self, start: Union[datetime, str, int], end: Union[datetime, str, int],
                          ticker: Union[list, tuple] = None):
         pass
@@ -1751,7 +1748,8 @@ class SqlServerFeeder(BaseFeeder):
                    'Settle', 'PrevSettle', 'Volume', 'Amount', 'OpenInterest', 'CoefAdj']
         if not data:
             return pd.DataFrame(columns=columns)
-        data_df = pd.DataFrame([asdict(bar) for bar in data]).rename(columns={"bartime": "datetime", "ticktime": "datetime"})
+        data_df = pd.DataFrame([asdict(bar) for bar in data]).rename(
+            columns={"bartime": "datetime", "ticktime": "datetime"})
         data_df = data_df.loc[:, [k.lower() for k in columns]]
         data_df.columns = columns
         return data_df
@@ -1837,11 +1835,11 @@ class SqlServerFeeder(BaseFeeder):
                        WHERE b.[Ticker] in ({str(ticker_lst)[1:-1]})) c
                 """
         data = self._api.exec_query(query)
-        data["Exchange"] = data["Exchange"].map(self._exchange)
         data["Ticker"] = data["Exchange"] + "." + data["Product"] + data["Ticker"]
         coef_adj = pd.DataFrame(self.all_tradeday(data["TradeDay"].min(), end_), columns=["TradeDay"])
         coef_adj = pd.merge(coef_adj, data, on="TradeDay", how="left")
-        coef_adj = coef_adj.set_index(["TradeDay", "Ticker"])[['CoefAdj']].unstack().fillna(method="pad").stack().reset_index()
+        coef_adj = coef_adj.set_index(["TradeDay", "Ticker"])[['CoefAdj']].unstack().fillna(
+            method="pad").stack().reset_index()
         coef_adj = pd.merge(coef_adj, data[["Ticker", "Product", "Instrument", "Exchange"]], on="Ticker", how="left")
         coef_adj = coef_adj.loc[coef_adj["TradeDay"] >= start_]
         return coef_adj
@@ -1885,7 +1883,7 @@ class SqlServerFeeder(BaseFeeder):
         grouped = {k: [i for i in info if info[i].table == k] for k in set(d.table for d in info.values())}
 
         query_all = []
-        for (table , ticker_lst) in grouped.items():
+        for (table, ticker_lst) in grouped.items():
             id_lst = [k[1:] for k in ticker_lst]
             query = f"""
                     SELECT [Date], '{table[0].lower()}' + CAST([ID] AS VARCHAR) AS [ID], [EconData] AS [Data]
@@ -1916,7 +1914,7 @@ class SqlServerFeeder(BaseFeeder):
         grouped = {k: [i for i in info if info[i].table == k] for k in set(d.table for d in info.values())}
 
         query_all = []
-        for (table , ticker_lst) in grouped.items():
+        for (table, ticker_lst) in grouped.items():
             id_lst = [k[1:] for k in ticker_lst]
             query = f"""
                     SELECT t.[Date] as [date], '{table[0].lower()}' + CAST(t.[ID] AS VARCHAR) AS [id], t.[EconData] AS [data]

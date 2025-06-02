@@ -1,9 +1,3 @@
-exchange:
-  map:
-    NE: BSE
-    SH: SSE
-    SZ: SZSE
-
 edb:
   map:
     a: Adv

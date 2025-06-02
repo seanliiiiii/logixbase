@@ -5,7 +5,7 @@ sys.path.append(r'D:\licx\codes\logixbase')
 from logixbase.feeder import TinysoftFeeder, TinysoftConfig, TQSDKConfig
 from logixbase.configer import load_schema, read_config
 from logixbase.utils import unify_time, DatabaseConfig
-from logixbase.feeder.sqlfeeder import SqlServerFeeder
+from logixbase.feeder.sqlfeeder import *
 from logixbase.feeder.tqfeeder import TqsdkFeeder
 
 
@@ -64,18 +64,18 @@ def sql_demo():
 
     # self.asset_quote("future", "20250401", "20250402", "daily")
     # self.asset_quote("future", "20250401", "20250402", "day")
-    self.asset_quote("future", "20250401", "20250402", "daily", ticker=['CFFEX.IF.2505', 'CZCE.MA.HOT', 'CZCE.MA.01', 'SHFE.rb.00', 'DCE.i'])
+    quote = self.asset_quote("future", "20250401", "20250402", "daily", ticker=['CFFEX.IF.2505', 'CZCE.MA.HOT', 'CZCE.MA.01', 'SHFE.rb.00', 'DCE.i'])
     # self.asset_quote("future", "20250401", "20250402", "30min")
     # self.asset_quote("future", "20250401", "20250402", "30min")
-    self.asset_quote("future", "20250401", "20250430", "m30", ticker=['CFFEX.IF.2505', 'CZCE.MA.HOT', 'CZCE.MA.01', 'SHFE.rb.00', 'DCE.i'])
-    self.asset_quote("future", "20250401", "20250430", "m35", ticker=['CFFEX.IF.2505', 'CZCE.MA.HOT', 'CZCE.MA.01', 'SHFE.rb.00', 'DCE.i'])
+    quote = self.asset_quote("future", "20250401", "20250430", "m60", ticker=['CFFEX.IF.2505', 'CZCE.MA.HOT', 'CZCE.MA.01', 'SHFE.rb.00', 'DCE.i'])
+    quote = self.asset_quote("future", "20250401", "20250430", "m35", ticker=['CFFEX.IF.2505', 'CZCE.MA.HOT', 'CZCE.MA.01', 'SHFE.rb.00', 'DCE.i'])
     # self.asset_quote("future", "20250401", "20250402", "30m", product=["SHFE.rb", "CZZE.MA", "DCE.i.00"])
     # self.asset_quote("future", "20250401", "20250402", "30min", ticker=["SHFE.rb2505", "CZCE.MA509", "DCE.i2509"])
 
     # self.asset_quote("stock", "20250401", "20250402", "day")
     # self.asset_quote("stock", "20250401", "20250402", "daily", product=["SZSE.000001", "SSE.600520"])
-    self.asset_quote("stock", "20250401", "20250402", "daily", ticker=["SZSE.000001", "SSE.SH600520"])
-    self.asset_quote("stock", "20250401", "20250402", "60min", ticker=["SZSE.000001", "SSE.SH600520"])
+    quote = self.asset_quote("stock", "20250401", "20250402", "daily", ticker=["SZSE.000001", "SSE.SH600520"])
+    quote = self.asset_quote("stock", "20250401", "20250402", "60min", ticker=["SZSE.000001", "SSE.SH600520"])
     # self.asset_quote("stock", "20250401", "20250402", "m60", product=["SZSE.000001", "SSE.SH600520"])
 
     # self.asset_quote("index", "20250401", "20250402", "day")
