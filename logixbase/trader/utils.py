@@ -175,6 +175,10 @@ def instrument_to_ticker(asset: str, exchange: str, instrument: str, deliver_yea
     """将交易所代码转为完整合约代码"""
     asset = asset.lower()
     exchange = exchange.upper()
+    if isinstance(deliver_year, (float, int, str)):
+        deliver_year = ''.join(filter(str.isdigit, str(deliver_year)))[:4]
+    else:
+        deliver_year = [''.join(filter(str.isdigit, str(k)))[:4] for k in deliver_year]
 
     if asset == "future":
         product = instrument_to_product(asset, instrument)
@@ -185,8 +189,8 @@ def instrument_to_ticker(asset: str, exchange: str, instrument: str, deliver_yea
         calendar = ''.join(re.findall(r'\d+', instrument))
         # 日历补全至4位年月
         if formater[1] != 4 and not deliver_year:
-            raise ValueError("合约日历不为4位，需传参合约交割年")
-        calendar = str(deliver_year)[:(4 - int(len(calendar)))] + calendar
+            deliver_year = str(datetime.now().year)[2]
+        calendar = deliver_year[:(4 - int(len(calendar)))] + calendar
     elif asset == "option":
         return f"{exchange}.{instrument}"
     elif asset in ("stock", "etf"):
@@ -206,8 +210,8 @@ def instrument_to_ticker(asset: str, exchange: str, instrument: str, deliver_yea
             # 补全日历至4位
             if formater[1] != 4:
                 if deliver_year:
-                    year = deliver_year if isinstance(deliver_year, (int, str)) else deliver_year[min(i, int(len(products)) - 1)]
-                    decade = str(year)[2]
+                    year = deliver_year if isinstance(deliver_year, str) else deliver_year[min(i, int(len(products)) - 1)]
+                    decade = year[2]
                 else:
                     decade = str(datetime.now().year)[2]
                 calendar_ = decade + calendar_[-3:]
