@@ -440,6 +440,8 @@ class SqlServerFeeder(BaseFeeder):
                             "class_level1", "class_level2", "execdate", "comm_open_pct", "comm_open_fix",
                             "comm_close_pct", "comm_close_fix", "comm_closetoday_pct", "comm_closetoday_fix"]
             info["asset"] = "future"
+            dt_cols = ["listdate", "delistdate", "deliverdate"]
+            info[dt_cols] = info[dt_cols].map(lambda x: x.strftime("%Y%m%d")).astype(int)
             info_list = info.fillna("").to_dict(orient="records")
             info_list = [FutureInfo(**k) for k in info_list]
             return {k.ticker: k for k in info_list}
@@ -453,12 +455,15 @@ class SqlServerFeeder(BaseFeeder):
                                                                   "SWClassLevel2": "sw_class_level2",
                                                                   "SWClassLevel3": "sw_class_level3"})
             info["asset"] = "stock"
+            dt_cols = ["EstablishDate", "ListDate"]
+            info[dt_cols] = info[dt_cols].map(lambda x: x.strftime("%Y%m%d")).astype(int)
             info.columns = info.columns.str.lower()
             info_list = info.fillna("").to_dict(orient="records")
             info_list = [StockInfo(**k) for k in info_list]
             return {k.ticker: k for k in info_list}
         elif asset == "index":
             info["asset"] = "index"
+            info["ListDate"] = info["ListDate"].map(lambda x: x.strftime("%Y%m%d")).astype(int)
             info.columns = info.columns.str.lower()
             info = info.rename(columns={"indexclass1": "class_level1", 'indexclass2': "class_level2", "ticker": "instrument"})
             info_list = info.fillna("").to_dict(orient="records")
@@ -466,6 +471,7 @@ class SqlServerFeeder(BaseFeeder):
             return {k.ticker: k for k in info_list}
         elif asset == "etf":
             info["asset"] = "etf"
+            info["ListDate"] = info["ListDate"].map(lambda x: x.strftime("%Y%m%d")).astype(int)
             info.columns = info.columns.str.lower()
             info = info.rename(columns={"totalissuedshares": "allshares", "ticker": "instrument"})
             info_list = info.fillna("").to_dict(orient="records")
@@ -476,6 +482,8 @@ class SqlServerFeeder(BaseFeeder):
             info["asset"] = "option"
             info["type"] = info["type"].map({"P": "put", "C": "call"})
             info = info.rename(columns={"callorput": "type"})
+            dt_cols = ["listdate", "delistdate", "deliverdate"]
+            info[dt_cols] = info[dt_cols].map(lambda x: x.strftime("%Y%m%d")).astype(int)
             info_list = info.fillna("").to_dict(orient="records")
             info_list = [OptionInfo(**k) for k in info_list]
             return {k.ticker: k for k in info_list}
@@ -1722,6 +1730,7 @@ class SqlServerFeeder(BaseFeeder):
         quote["closeret"] = (np.log(quote["close"]) - np.log(quote["prevclose"])).round(4)
         quote["settleret"] = (np.log(quote["settle"]) - np.log(quote["prevsettle"])).round(4)
         quote["interval"] = Interval(interval)
+        quote["tradeday"] = quote["tradeday"].map(lambda x: x.strftime("%Y%m%d")).astype(int)
         quote = quote.loc[:, [k for k in quote.columns if k in get_type_hints(BarData)]]
         # 转为Bar schema
         quote_list = quote.to_dict("records")

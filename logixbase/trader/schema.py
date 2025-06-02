@@ -25,9 +25,9 @@ class FutureInfo(BaseModel):
     multiplier: float
     pricetick: float
     margin: float                               # 最低保证金率
-    listdate: Union[None, datetime]  = None                        # 合约上市日
-    delistdate: Union[None, datetime] = None                       # 合约退市日
-    deliverdate: Union[None, datetime] = None                      # 合约交割日
+    listdate: int = None                        # 合约上市日
+    delistdate: int = None                       # 合约退市日
+    deliverdate: int = None                      # 合约交割日
 
     ticker: str = ""
     minmarketordervolume: float = 1             # 最小交易单位（手）
@@ -48,9 +48,10 @@ class FutureInfo(BaseModel):
     comm_closetoday_pct: float = 0                 # 平今浮动平仓手续费
 
     def model_post_init(self, __context: Any) -> None:
-        if self.delistdate:
+        dl_day = self.delistdate or self.deliverdate
+        if dl_day and int(len(str(dl_day))) >= 4:
             self.ticker = instrument_to_ticker(self.asset.value, self.exchange.value,
-                                               self.instrument, self.delistdate.year)
+                                               self.instrument, str(self.delistdate)[:4])
 
 
 class OptionInfo(BaseModel):
@@ -69,9 +70,9 @@ class OptionInfo(BaseModel):
     strike: float                               # 行权价格
     optiontype: OptionType                            # 期权类型
 
-    listdate: Union[None, datetime] = None                          # 合约上市日
-    delistdate: Union[None, datetime] = None                       # 期权到期日
-    deliverdate: Union[None, datetime] = None                         # 行权日
+    listdate: int = None                          # 合约上市日
+    delistdate: int = None                       # 期权到期日
+    deliverdate: int = None                         # 行权日
 
     ticker: str = ""                                # 标准合约代码
     comm_open_fix: float = 0                        # 固定开仓手续费
@@ -82,9 +83,10 @@ class OptionInfo(BaseModel):
     comm_closetoday_pct: float = 0.                # 平今浮动平仓手续费
 
     def model_post_init(self, __context: Any) -> None:
-        if self.delistdate:
-            self.ticker = instrument_to_ticker(self.asset.value, self.exchange.value, self.instrument,
-                                               self.delistdate.year)
+        dl_day = self.delistdate or self.deliverdate
+        if dl_day and int(len(str(dl_day))) >= 4:
+            self.ticker = instrument_to_ticker(self.asset.value, self.exchange.value,
+                                               self.instrument, str(self.delistdate)[:4])
 
 
 class StockInfo(BaseModel):
@@ -94,9 +96,9 @@ class StockInfo(BaseModel):
 
     ticker: str = ""                            # 标准合约代码
     name: str = ""                              # 股票名
-    listdate: datetime                          # 股票挂牌日
+    listdate: int                          # 股票挂牌日
     status: str = ""                            # 股票当前状态
-    establishdate: datetime                     # 公司成立日
+    establishdate: int                     # 公司成立日
 
     multiplier: float = 100                     # 股票乘数
     pricetick: float = 0.01                      # 股票跳价单位
@@ -123,7 +125,7 @@ class IndexInfo(BaseModel):
     exchange: Exchange                          # 交易所
     asset: Asset                                # 资产类别
     name: str                                   # 指数名
-    listdate: datetime                          # 指数挂牌日
+    listdate: int                          # 指数挂牌日
     beginpoint: float                           # 指数起点
     samplesize: float                           # 样本大小
 
@@ -140,7 +142,7 @@ class EtfInfo(BaseModel):
     exchange: Exchange                          # 交易所
     asset: Asset                                # 资产类别
     name: str                                   # ETF名
-    listdate: datetime                          # ETF挂牌日
+    listdate: int                          # ETF挂牌日
     style: str                                # ETF类型
     allshares: float                            # 总份额
     benchmark: str                              # 基准指数
@@ -192,7 +194,7 @@ class BarData:
     asset: Asset
     ticker: str
     bartime: datetime
-    tradeday: datetime
+    tradeday: int
     interval: Interval
 
     product: str = ""

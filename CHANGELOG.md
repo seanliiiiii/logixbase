@@ -2,6 +2,10 @@
 
 本文档记录了 LogixBase 项目的所有重大变更。日志格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.5.7] - 2025-06-02
+### 修改
+- 所有日期数据类的日期字段全部调整为int格式
+
 ## [0.5.3] - 2025-05-23
 ### 修改
 - 修复部分bug
