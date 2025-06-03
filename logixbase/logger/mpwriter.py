@@ -12,8 +12,9 @@ class MPLogWriter:
         self.config: LoggerConfig = config
 
         # 使用 multiprocessing.Queue 来传递日志消息
-        self.log_queue = mp.Manager().Queue()
-        self.stop_event = mp.Manager().Event()
+        mgr = mp.Manager()
+        self.log_queue = mgr.Queue()
+        self.stop_event = mgr.Event()
         # 在主进程中创建日志写入进程
         self.worker_process = None
 

@@ -39,19 +39,19 @@ class LogManager(OPP, IDP):
         self._uuid: str = str(uuid.uuid4())
 
         self.config: LoggerConfig = self._overwrite_config(config)
+        self.log_writer = None
+        self.__started: bool = False
+        self.reset_logger()
+
+    def reset_logger(self):
         # 在主进程中初始化 MPLogWriter，子进程中不初始化写入器
         if self.config.multiprocess:
             if mp.current_process().name == "MainProcess":
                 self.log_writer = MPLogWriter(self.config)
                 self.log("INFO", "多进程日志日志队列已创建，待启动日志管理器")
-            else:
-                self.log_writer = None
-            self.__started = False
         else:
             self.log_writer = LogWriter(self.config)
-            self.log_writer.start()
             self.log("INFO", "单进程日志管理器已启动")
-            self.__started = True
 
     @staticmethod
     def _overwrite_config(config: Union[LoggerConfig, dict]) -> LoggerConfig:
@@ -91,6 +91,7 @@ class LogManager(OPP, IDP):
             self.log("INFO", "关闭日志管理器")
             self.log_writer.join()
             self.__started = False
+            self.reset_logger()
 
     def status(self):
         return self.__started

@@ -18,7 +18,7 @@ import pandas as pd
 from enum import Enum
 
 from ..trader import (AccountInfo, AccountPosition, TickData, adjust_price, round_to, FutureInfo, OptionInfo,
-                      instrument_to_ticker, instrument_to_product)
+                      instrument_to_ticker, instrument_to_product, Asset, Exchange)
 from ..utils import unify_time, ProcessBar, all_tradeday, all_calendar
 
 from .base import BaseGateway
@@ -69,6 +69,12 @@ class DynamicData:
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+        if hasattr(self, "asset"):
+            self.asset = Asset(self.asset.lower())
+
+        if hasattr(self, "exchange"):
+            self.exchange = Exchange(self.exchange.upper())
 
 
 mdapi = import_api("thostmduserapi")
@@ -348,7 +354,7 @@ class CtpTdApi(tdapi.CThostFtdcTraderSpi,
         self._broker_id: str = config.brokerid
 
         if self.gateway.logger:
-            flow_dir = Path(self.gateway.logger.log_path).joinpath("ctp_flow", "tdapi", self._user)
+            flow_dir = Path(self.gateway.logger.config.log_path).joinpath("ctp_flow", "tdapi", self._user)
         else:
             flow_dir = LOCAL_DIR.joinpath("ctp_flow", "tdapi", self._user)
         os.makedirs(flow_dir, exist_ok=True)
@@ -505,12 +511,17 @@ class CtpTdApi(tdapi.CThostFtdcTraderSpi,
             # 调整spread合约的ticker
             for info in data.values():
                 if info.asset.value == "spread":
-                    instrument_comb = info.instrument.split(" ")[1].replace(" ", "").split("&")
-                    info_comb = [data[k] for k in instrument_comb]
-                    deliver_year = [k.deliverdate for k in info_comb]
-                    deliver_year = [k.year for k in deliver_year] if all(deliver_year) else None
+                    spread_instr = info.instrument.split(" ")[1].replace(" ", "").split("&")
+                    spread_info = [data[k] for k in spread_instr]
+                    # 生成spread合约ticker/product
+                    dl_days = [k.delistdate or k.deliverdate for k in spread_info]
+                    deliver_year = [str(k)[:4] for k in dl_days if k]
                     info.ticker = instrument_to_ticker(info.asset.value, info.exchange.value, info.instrument, deliver_year)
                     info.product = instrument_to_product(info.asset.value, info.instrument)
+                    # 调整listdate、delistdate、deliverdate
+                    info.listdate = max([k.listdate for k in spread_info if k.listdate])
+                    info.delistdate = min([k.delistdate for k in spread_info if k.delistdate])
+                    info.deliverdate = min([k.deliverdate for k in spread_info if k.deliverdate])
             self.INFO(f"合约查询成功: 总计{int(len(data))}")
             return data
         else:
@@ -536,16 +547,23 @@ class CtpTdApi(tdapi.CThostFtdcTraderSpi,
         _op_map = {49: "call",
                    50: "put"}
 
+        # 调整日期格式
+        if info.DeliveryYear and info.DeliveryMonth:
+            calendar = f"{info.DeliveryYear}" + "{:02}".format(info.DeliveryMonth)
+            calendar = eval(calendar + "15") if ''.join(filter(str.isdigit, calendar)) else 0
+        else:
+            calendar = 0
+
         data = {"Asset": _map[info.ProductClass],
                 "Instrument": info.InstrumentID,
                 "ExchangeInstrument": info.ExchangeInstID,
                 "InstrumentName": info.InstrumentName,
                 "Exchange": info.ExchangeID,
                 "Product": info.ProductID,
-                "CreateDate":  unify_time(info.CreateDate, fmt=int, mode=3) if info.OpenDate else None,
-                "ListDate": unify_time(info.OpenDate, fmt=int, mode=3) if info.OpenDate else None,
-                "DelistDate": unify_time(info.ExpireDate, fmt=int, mode=3) if info.ExpireDate else None,
-                "DeliverDate": unify_time(info.EndDelivDate, fmt=int, mode=3) if info.EndDelivDate else f"{info.DeliveryYear}{info.DeliveryMonth}",
+                "CreateDate": unify_time(info.CreateDate, fmt="int", mode=3) if info.CreateDate else 0,
+                "ListDate": unify_time(info.OpenDate, fmt="int", mode=3) if info.OpenDate else 0,
+                "DelistDate": unify_time(info.ExpireDate, fmt="int", mode=3) if info.ExpireDate else 0,
+                "DeliverDate": unify_time(info.EndDelivDate, fmt="int", mode=3) if info.EndDelivDate else calendar,
                 "MaxMarketOrderVolume": adjust_price(info.MaxMarketOrderVolume, 0),
                 "MinMarketOrderVolume": adjust_price(info.MinMarketOrderVolume, 0),
                 "MaxLimitOrderVolume": adjust_price(info.MaxLimitOrderVolume, 0),
@@ -1120,7 +1138,7 @@ class CtpMdApi(BaseSpiTemplate,
         """连接行情服务器"""
         # 解析变量
         if self.gateway.logger:
-            flow_dir = Path(self.gateway.logger.log_path).joinpath("ctp_flow", "mdapi", config.username)
+            flow_dir = Path(self.gateway.logger.config.log_path).joinpath("ctp_flow", "mdapi", config.username)
         else:
             flow_dir = LOCAL_DIR.joinpath("ctp_flow", "mdapi", config.username)
         os.makedirs(flow_dir, exist_ok=True)

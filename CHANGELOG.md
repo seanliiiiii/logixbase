@@ -2,6 +2,10 @@
 
 本文档记录了 LogixBase 项目的所有重大变更。日志格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.6.1] - 2025-06-02
+### 修改
+- 优化CTP gateway部分字段逻辑bug
+
 ## [0.5.8] - 2025-06-02
 ### 修改
 - 优化SqlFeeder部分bug
