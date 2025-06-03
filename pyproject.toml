@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "logixbase"
-version = "0.6.1"
+version = "0.6.4"
 description = "LogixQuant基础功能包项目"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -30,33 +30,33 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 dependencies = [
-    "numpy>=1.20.0",
-    "pandas>=1.3.0",
-    "pyyaml>=6.0",
-    "pytz>=2022.1",
-    "requests>=2.27.0",
-    "sqlalchemy>=1.4.0",
-    "matplotlib>=3.5.0",
-    "numba>=0.55.0",
-    "statsmodels>=0.13.0",
-    "seaborn>=0.11.0",
-    "scikit-learn>=1.0.0",
-    "scipy>=1.7.0",
+    "numpy==1.22.4",
+    "pandas==2.2.3",
+    "pyyaml==6.0.2",
+    "pytz==2024.2",
+    "requests==2.32.3",
+    "sqlalchemy==2.0.41",
+    "matplotlib==3.8.4",
+    "numba==0.60.0",
+    "statsmodels==0.14.1",
+    "seaborn==0.13.2",
+    "scikit-learn==1.5.2",
+    "scipy==1.7.3",
     "cryptography==41.0.5",
     "bcrypt==4.1.1",
-    "Cython>=0.29.0",
-    "pydantic>=1.9.0",
-    "watchdog>=2.1.0",
-    "psutil>=5.8.0",
-    "tqsdk>=1.9.0",
-    "path>=16.4.0",
-    "cx_Oracle>=8.0.0",
-    "pymssql>=2.2.0",
-    "uvicorn>=0.17.0",
-    "fastapi>=0.70.0",
-    "pandas_market_calendars>=4.0.0",
+    "Cython==3.0.11",
+    "pydantic==2.10.6",
+    "watchdog==6.0.0",
+    "psutil==6.1.0",
+    "tqsdk==3.7.6",
+    "path==17.0.0",
+    "cx_Oracle==8.3.0",
+    "pymssql==2.3.2",
+    "uvicorn==0.34.0",
+    "fastapi==0.115.12",
+    "pandas_market_calendars==5.1.0",
     "paramiko==2.10.0",
-    "jinja2>=3.1.4"
+    "jinja2==3.1.4"
 ]
 
 [project.optional-dependencies]
