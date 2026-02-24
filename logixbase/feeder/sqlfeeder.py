@@ -438,7 +438,7 @@ class SqlServerFeeder(BaseFeeder):
             info["asset"] = "future"
             dt_cols = ["listdate", "delistdate", "deliverdate"]
             info[dt_cols] = info[dt_cols].map(lambda x: x.strftime("%Y%m%d")).astype(int)
-            info_list = info.fillna("").to_dict(orient="records")
+            info_list = info.fillna("").drop(columns=["ticker"]).to_dict(orient="records")
             info_list = [FutureInfo(**k) for k in info_list]
             return {k.ticker: k for k in info_list}
         elif asset == "stock":
@@ -454,7 +454,7 @@ class SqlServerFeeder(BaseFeeder):
             dt_cols = ["EstablishDate", "ListDate"]
             info[dt_cols] = info[dt_cols].map(lambda x: x.strftime("%Y%m%d")).astype(int)
             info.columns = info.columns.str.lower()
-            info_list = info.fillna("").to_dict(orient="records")
+            info_list = info.fillna("").drop(columns=["ticker"]).to_dict(orient="records")
             info_list = [StockInfo(**k) for k in info_list]
             return {k.ticker: k for k in info_list}
         elif asset == "index":
@@ -463,7 +463,7 @@ class SqlServerFeeder(BaseFeeder):
             info.columns = info.columns.str.lower()
             info = info.rename(
                 columns={"indexclass1": "class_level1", 'indexclass2': "class_level2", "ticker": "instrument"})
-            info_list = info.fillna("").to_dict(orient="records")
+            info_list = info.fillna("").drop(columns=["ticker"]).to_dict(orient="records")
             info_list = [IndexInfo(**k) for k in info_list]
             return {k.ticker: k for k in info_list}
         elif asset == "etf":
@@ -471,7 +471,7 @@ class SqlServerFeeder(BaseFeeder):
             info["ListDate"] = info["ListDate"].map(lambda x: x.strftime("%Y%m%d")).astype(int)
             info.columns = info.columns.str.lower()
             info = info.rename(columns={"totalissuedshares": "allshares", "ticker": "instrument"})
-            info_list = info.fillna("").to_dict(orient="records")
+            info_list = info.fillna("").drop(columns=["ticker"]).to_dict(orient="records")
             info_list = [EtfInfo(**k) for k in info_list]
             return {k.ticker: k for k in info_list}
         elif asset == "option":
@@ -481,7 +481,7 @@ class SqlServerFeeder(BaseFeeder):
             info = info.rename(columns={"callorput": "type"})
             dt_cols = ["listdate", "delistdate", "deliverdate"]
             info[dt_cols] = info[dt_cols].map(lambda x: x.strftime("%Y%m%d")).astype(int)
-            info_list = info.fillna("").to_dict(orient="records")
+            info_list = info.fillna("").drop(columns=["ticker"]).to_dict(orient="records")
             info_list = [OptionInfo(**k) for k in info_list]
             return {k.ticker: k for k in info_list}
 
@@ -566,7 +566,7 @@ class SqlServerFeeder(BaseFeeder):
         quote = func(*arg, ticker).dropna(subset=["DateTime"])
         self.INFO(f"{asset.capitalize()}资产{interval.value}行情数据获取完成: {int(len(quote))}条记录")
 
-        quote = quote.drop_duplicates(subset=["DateTime", "Instrument"])
+        quote = quote.drop_duplicates(subset=["DateTime", "Ticker"])
         if use_schema:
             quote = self.create_bar_schema(asset, interval.value, quote)
 
@@ -742,7 +742,8 @@ class SqlServerFeeder(BaseFeeder):
             query = f"""
                     SELECT [DateTime], [TradeDay], x.[Product] AS [Ticker], y.[Product], y.[Exchange], 
                             y.[Instrument], [Open], [High], [Low],
-                            [Close], [PrevClose], [Settle], [PrevSettle], [Volume], [Amount], [OpenInterest], [CoefAdj]
+                            [Close], [PrevClose], [Settle], [PrevSettle], [Volume], [Amount], [OpenInterest], 
+                            CAST([CoefAdj] AS FLOAT) AS [CoefAdj]
                     FROM ({query}) x
                     LEFT JOIN (SELECT [Ticker], [Product], [Exchange], [Instrument]
                                FROM [FUTURE_RESEARCH_DAILY].[dbo].[FutureInfo_Basic]
@@ -1001,7 +1002,7 @@ class SqlServerFeeder(BaseFeeder):
         # 解析目标合约
         ticker_lst = parse_ticker("stock", ticker)[1]
         if not ticker:
-            ticker_lst = self.stock_info_basic()["Instrument"].tolist()
+            ticker_lst = self.stock_info_basic()["Ticker"].tolist()
 
         data = pd.DataFrame()
         for i in range(0, int(len(ticker_lst)), 500):
@@ -1754,21 +1755,21 @@ class SqlServerFeeder(BaseFeeder):
         data_df.columns = columns
         return data_df
 
-    def asset_coef_adj(self, asset: str, ticker: Union[list, tuple], start: Union[datetime, str, int],
-                       end: Union[datetime, str, int]):
+    def asset_coef_adj(self, asset: str, ticker: Union[list, tuple, None] = None, start: Union[datetime, str, int] = None,
+                       end: Union[datetime, str, int] = None):
         asset = asset.lower()
         if asset == "future":
             return self.future_coef_adj(ticker, start, end)
         elif asset == "stock":
-            return self.stock_coef_adj(ticker, start, end)
+            return self.stock_coef_adj(ticker)
         else:
             self.ERROR(f"仅支持以下资产的复权系数查询: future / stock")
 
-    def future_coef_adj(self, ticker: Union[list, tuple], start: Union[datetime, str, int],
-                        end: Union[datetime, str, int]):
+    def future_coef_adj(self, ticker: Union[list, tuple, None] = None, start: Union[datetime, str, int] = None,
+                        end: Union[datetime, str, int] = None):
         # 统一日期格式
-        start_ = unify_time(start, fmt="str", mode=3, dot="")
-        end_ = unify_time(end, fmt="str", mode=3, dot="")
+        start_ = unify_time(start, fmt="str", mode=3, dot="") if start else "19800101"
+        end_ = unify_time(end, fmt="str", mode=3, dot="") if end else datetime.now().strftime("%Y%m%d")
         # 解析品种列表
         product, ticker_lst = parse_ticker("future", ticker)
         hots = [k for k in product if "_" in k]
@@ -1783,8 +1784,8 @@ class SqlServerFeeder(BaseFeeder):
                            FROM [FUTURE_RESEARCH_DAILY].[dbo].[FutureCoefAdj_MainTicker] a
                            LEFT JOIN [FUTURE_RESEARCH_DAILY].[dbo].[FutureInfo_Basic] b
                            on a.Ticker = b.Ticker
-                           WHERE a.[Product] in ({str(raw_hot)[1:-1]}) 
-                                 AND a.[TradeDay] >= '{start_}' AND a.[TradeDay] <= '{end_}') c
+                           WHERE a.[TradeDay] >= '{start_}' AND a.[TradeDay] <= '{end_}' 
+                           {f"AND a.[Product] in ({str(raw_hot)[1:-1]})" if product else ""}) c
                      """
         query_calendar = f"""
                          SELECT [TradeDay], [Ticker], [Product], [Instrument], [Exchange], 
@@ -1796,8 +1797,8 @@ class SqlServerFeeder(BaseFeeder):
                               FROM [FUTURE_RESEARCH_DAILY].[dbo].[FutureCoefAdj_Calendar] a
                               LEFT JOIN [FUTURE_RESEARCH_DAILY].[dbo].[FutureInfo_Basic] b
                               on a.[Ticker] = b.[Ticker]
-                              WHERE a.[Product] in ({str(calen_hot)[1:-1]}) 
-                                      AND a.[TradeDay] >= '{start_}' AND a.[TradeDay] <= '{end_}') c
+                              WHERE a.[TradeDay] >= '{start_}' AND a.[TradeDay] <= '{end_}'
+                              {f"AND a.[Product] in ({str(calen_hot)[1:-1]})" if product else ""}) c
                           """
 
         if (raw_hot and calen_hot) or (not product):
@@ -1815,11 +1816,7 @@ class SqlServerFeeder(BaseFeeder):
                           + "." + data["Ticker"])
         return data
 
-    def stock_coef_adj(self, ticker: Union[list, tuple], start: Union[datetime, str, int],
-                       end: Union[datetime, str, int]):
-        # 统一日期格式
-        start_ = unify_time(start, mode=3, dot="")
-        end_ = unify_time(end, fmt="str", mode=3, dot="")
+    def stock_coef_adj(self, ticker: Union[list, tuple, None] = None):
         # 解析品种列表
         product, ticker_lst = parse_ticker("stock", ticker)
         query = f"""
@@ -1827,22 +1824,17 @@ class SqlServerFeeder(BaseFeeder):
                         CAST([CoefAdj] AS FLOAT) AS [CoefAdj]
                  FROM (SELECT a.[TradeDay], b.[Ticker], 'STK' AS [Product], b.[Ticker] AS [Instrument],
                             b.[Exchange],
-                            CAST(EXP(SUM(LOG(a.[CoefAdj])) 
-                            OVER (PARTITION BY a.[Ticker] ORDER BY a.[TradeDay])) AS DECIMAL(18, 4)) AS [CoefAdj]
+                            EXP(SUM(LOG(a.[CoefAdj])) 
+                            OVER (PARTITION BY a.[Ticker] ORDER BY a.[TradeDay])) AS [CoefAdj]
                        FROM [STOCK_RESEARCH_DAILY].[dbo].[StockCoefAdj] a
                        INNER JOIN [STOCK_RESEARCH_DAILY].[dbo].[StockInfo_Basic] b
                        on a.Ticker = b.Ticker
-                       WHERE b.[Ticker] in ({str(ticker_lst)[1:-1]})) c
+                       {f"WHERE b.[Ticker] in ({str(ticker_lst)[1:-1]}))" if ticker_lst else ""}) c
                 """
         data = self._api.exec_query(query)
-        data["Ticker"] = data["Exchange"] + "." + data["Product"] + data["Ticker"]
-        coef_adj = pd.DataFrame(self.all_tradeday(data["TradeDay"].min(), end_), columns=["TradeDay"])
-        coef_adj = pd.merge(coef_adj, data, on="TradeDay", how="left")
-        coef_adj = coef_adj.set_index(["TradeDay", "Ticker"])[['CoefAdj']].unstack().fillna(
-            method="pad").stack().reset_index()
-        coef_adj = pd.merge(coef_adj, data[["Ticker", "Product", "Instrument", "Exchange"]], on="Ticker", how="left")
-        coef_adj = coef_adj.loc[coef_adj["TradeDay"] >= start_]
-        return coef_adj
+        data["Ticker"] = data["Exchange"] + "." + data["Product"] + "." + data["Ticker"]
+        data["CoefAdj"] = data["CoefAdj"].round(6)
+        return data.loc[:, ["TradeDay", "Ticker", "CoefAdj"]]
 
     def edb_info(self, ticker: Union[list, tuple, dict] = None, use_schema: bool = False):
         if ticker and not isinstance(ticker, (list, tuple, dict)):

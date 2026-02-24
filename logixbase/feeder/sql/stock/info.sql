@@ -130,15 +130,52 @@ BEGIN
     );
 
     EXEC(''
-    CREATE NONCLUSTERED INDEX IX_' + @adj_table + '_TradeDay
-    ON ' + QUOTENAME(@db) + '.dbo.' + QUOTENAME(@adj_table) + ' ([TradeDay]);
+    CREATE NONCLUSTERED INDEX IX_' + @adj_table + '_1
+    ON ' + QUOTENAME(@db) + '.dbo.' + QUOTENAME(@adj_table) + ' (TradeDay)
+    WITH (
+        STATISTICS_NORECOMPUTE = OFF,
+        IGNORE_DUP_KEY = OFF,
+        ALLOW_ROW_LOCKS = ON,
+        ALLOW_PAGE_LOCKS = ON
+    )
+    ON [PRIMARY]''
+    );
 
-    CREATE NONCLUSTERED INDEX IX_' + @adj_table + '_Ticker
-    ON ' + QUOTENAME(@db) + '.dbo.' + QUOTENAME(@adj_table) + ' ([Ticker]);
+    EXEC(''
+    CREATE NONCLUSTERED INDEX IX_' + @adj_table + '_2
+    ON ' + QUOTENAME(@db) + '.dbo.' + QUOTENAME(@adj_table) + ' (Ticker)
+    WITH (
+        STATISTICS_NORECOMPUTE = OFF,
+        IGNORE_DUP_KEY = OFF,
+        ALLOW_ROW_LOCKS = ON,
+        ALLOW_PAGE_LOCKS = ON
+    )
+    ON [PRIMARY]''
+    );
 
-    CREATE NONCLUSTERED INDEX IX_' + @adj_table + '_TradeDay_Ticker
-    ON ' + QUOTENAME(@db) + '.dbo.' + QUOTENAME(@adj_table) + ' ([TradeDay], [Ticker]);
-    '');
+    EXEC(''
+    CREATE UNIQUE NONCLUSTERED INDEX IX_' + @adj_table + '_3
+    ON ' + QUOTENAME(@db) + '.dbo.' + QUOTENAME(@adj_table) + ' (TradeDay, Ticker)
+    WITH (
+        STATISTICS_NORECOMPUTE = OFF,
+        IGNORE_DUP_KEY = ON,
+        ALLOW_ROW_LOCKS = ON,
+        ALLOW_PAGE_LOCKS = ON
+    )
+    ON [PRIMARY]''
+    );
+
+    EXEC(''
+    CREATE NONCLUSTERED INDEX IX_' + @adj_table + '_4
+    ON ' + QUOTENAME(@db) + '.dbo.' + QUOTENAME(@adj_table) + ' (UpdateTime)
+    WITH (
+        STATISTICS_NORECOMPUTE = OFF,
+        IGNORE_DUP_KEY = OFF,
+        ALLOW_ROW_LOCKS = ON,
+        ALLOW_PAGE_LOCKS = ON
+    )
+    ON [PRIMARY]''
+    );
 END;
 ';
 

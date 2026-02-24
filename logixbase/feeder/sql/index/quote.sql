@@ -126,7 +126,7 @@ BEGIN
 
     IF NOT EXISTS (
         SELECT 1 FROM ' + QUOTENAME(@db) + '.sys.objects
-        WHERE name = N''' + @status_table + ''' AND type = ''U''
+        WHERE name = N''' + CAST(@status_table AS NVARCHAR(MAX)) + ''' AND type = ''U''
     )
     BEGIN
         CREATE TABLE [' + @db + '].[dbo].[' + @status_table + '] (

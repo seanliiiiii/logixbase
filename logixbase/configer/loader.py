@@ -170,8 +170,13 @@ class ConfigLoader(OPP, LDP, IDP):
         required_modules = [k.lower() for k in get_type_hints(self.schema_cls).keys()]
         # 找出schema_data中缺失的模块
         missing = [m for m in required_modules if m not in schema_data]
-        # 使用schema_data中的数据实例化schema_cls
-        instance = self.schema_cls(**schema_data)
+        # 判断存在嵌套结构
+        if missing and module_config_data.get(self.schema_cls.__name__.lower().rstrip('config'), {}):
+            instance = self.schema_cls(**module_config_data[self.schema_cls.__name__.lower().rstrip('config')])
+        # 存在嵌套结构
+        else:
+            # 使用schema_data中的数据实例化schema_cls
+            instance = self.schema_cls(**schema_data)
         # 将实例设置到代理对象中
         self.proxy.set_instance(instance)
         # 返回实例化后的对象

@@ -125,7 +125,7 @@ class CtpGateway(BaseGateway):
         if os.path.exists(LOCAL_DIR.joinpath("ctp_flow")):
             shutil.rmtree(LOCAL_DIR.joinpath("ctp_flow"))
 
-    def subscribe(self, instruments: list = None) -> dict:
+    def subscribe(self, instruments: list = None, asset: Union[list, tuple, dict] = ("future", "option")) -> dict:
         """订阅行情"""
         n = 0
         while n < 3:
@@ -137,10 +137,10 @@ class CtpGateway(BaseGateway):
             sleep(5)
         INSTRUMENT_INFO.update(self.td_api.qry_instrument())
         # 未指定订阅合约，默认订阅全市场合约
-        if instruments is None:
+        if not instruments:
             instruments = list(INSTRUMENT_INFO)
         # 订阅合约
-        instruments = [k for k in instruments if INSTRUMENT_INFO[k].asset.value in ("future", "option", "spread")]
+        instruments = [k for k in instruments if INSTRUMENT_INFO[k].asset.value in asset]
         self.md_api.subscribe(instruments)
         return {INSTRUMENT_INFO[k].ticker: INSTRUMENT_INFO[k] for k in self.md_api.tick_count}
 
@@ -1585,6 +1585,8 @@ def md_to_tick(md: Union[mdapi.CThostFtdcDepthMarketDataField, tdapi.CThostFtdcD
 def tick_to_md(tick: TickData) -> dict:
     """将TickData解析为csv存储格式, ticktime调整为毫秒"""
     d = tick.__dict__
-    d["ticktime"] = tick.ticktime.strftime("%Y%m%d %H:%M:%S") + f":{int(tick.ticktime.microsecond / 1000)}"
+    tt = tick.ticktime
+    d["ticktime"] = "{:02d}{:02d}{:02d} {:02d}:{:02d}:{:02d}:{:02d}".format(tt.year, tt.month, tt.day, tt.hour,
+                                                                            tt.minute, tt.second, int(tt.microsecond/1000))
     d = {k: v.value if isinstance(v, Enum) else v for (k, v) in d.items()}
     return d

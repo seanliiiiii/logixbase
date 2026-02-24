@@ -1,19 +1,22 @@
-DECLARE @db NVARCHAR(100) = '{{db}}';
-DECLARE @table NVARCHAR(100) = '{{table}}';
-DECLARE @status_table NVARCHAR(100) = 'UpdateRecord';
+DECLARE @db NVARCHAR(100) = '{{db}}';             -- 替换为你的数据库名
+DECLARE @table NVARCHAR(100) = '{{table}}';       -- 分钟线或日线表名
+DECLARE @status_table NVARCHAR(100) = 'UpdateRecord'; -- 分钟线状态追踪表
+
 DECLARE @sql NVARCHAR(MAX);
 
--- 主表建表逻辑（动态 SQL 包裹）
-SET @sql = '
-IF NOT EXISTS (
-    SELECT 1 FROM [' + @db + '].sys.objects 
-    WHERE name = N''' + @table + ''' AND type = ''U''
-)
+IF LOWER(RIGHT(@db, 5)) = 'daily'
 BEGIN
-    CREATE TABLE [' + @db + '].[dbo].[' + @table + '] (
+    -- ===== 日线行情建表逻辑 =====
+    SET @sql = '
+    IF NOT EXISTS (
+        SELECT 1 FROM ' + QUOTENAME(@db) + '.sys.objects
+        WHERE name = N''' + @table + ''' AND type = ''U''
+    )
+    BEGIN
+        CREATE TABLE [' + @db + '].[dbo].[' + @table + '] (
         [PK] INT NOT NULL IDENTITY (1, 1),
         [DateTime] DATETIME NOT NULL,
-        [TradeDay] DATETIME NOT NULL, 
+        [TradeDay] DATETIME NOT NULL,
         [BarTime] VARCHAR(5) NOT NULL,
         [Ticker] VARCHAR(10) NOT NULL,
         [Product] VARCHAR(5) NOT NULL,
@@ -23,7 +26,7 @@ BEGIN
         [Low] FLOAT NULL,
         [PrevClose] FLOAT NULL,
         [Settle] FLOAT NULL,
-        [PrevSettle] FLOAT NULL, 
+        [PrevSettle] FLOAT NULL,
         [Volume] FLOAT NULL,
         [Amount] FLOAT NULL,
         [OpenInterest] FLOAT NULL,
@@ -56,17 +59,62 @@ BEGIN
     CREATE UNIQUE NONCLUSTERED INDEX [' + @table + '_11] ON [' + @db + '].[dbo].[' + @table + '] (TradeDay, DateTime, Ticker)
         WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=ON, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
 
-END';
-EXEC sp_executesql @sql;
-
--- 状态表逻辑（仅当 db 不包含 daily）
-IF CHARINDEX('daily', LOWER(@db)) = 0
+    END
+    ';
+END
+ELSE
 BEGIN
-    DECLARE @sql2 NVARCHAR(MAX);
-    SET @sql2 = '
+    -- ===== 分钟线行情建表逻辑 =====
+    SET @sql = '
     IF NOT EXISTS (
-        SELECT 1 FROM [' + @db + '].sys.objects 
-        WHERE name = N''' + @status_table + ''' AND type = ''U''
+        SELECT 1 FROM ' + QUOTENAME(@db) + '.sys.objects
+        WHERE name = N''' + @table + ''' AND type = ''U''
+    )
+    BEGIN
+        CREATE TABLE [' + @db + '].[dbo].[' + @table + '] (
+        [PK] INT NOT NULL IDENTITY (1, 1),
+        [DateTime] DATETIME NOT NULL,
+        [TradeDay] DATETIME NOT NULL,
+        [BarTime] VARCHAR(5) NOT NULL,
+        [Ticker] VARCHAR(10) NOT NULL,
+        [Open] FLOAT NULL,
+        [Close] FLOAT NULL,
+        [High] FLOAT NULL,
+        [Low] FLOAT NULL,
+        [PrevClose] FLOAT NULL,
+        [Settle] FLOAT NULL,
+        [PrevSettle] FLOAT NULL,
+        [Volume] FLOAT NULL,
+        [Amount] FLOAT NULL,
+        [OpenInterest] FLOAT NULL,
+        [UpdateTime] DATETIME NOT NULL CONSTRAINT [DF_' + @table + '_UpdateTime] DEFAULT (GETDATE()),
+        CONSTRAINT [PK_' + @table + '] PRIMARY KEY CLUSTERED ([PK] ASC)
+        WITH (PAD_INDEX=OFF, STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF,
+              ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON)
+        ) ON [PRIMARY];
+
+        CREATE NONCLUSTERED INDEX [' + @table + '_1] ON [' + @db + '].[dbo].[' + @table + '] (DateTime)
+            WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [' + @table + '_2] ON [' + @db + '].[dbo].[' + @table + '] (BarTime)
+            WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [' + @table + '_3] ON [' + @db + '].[dbo].[' + @table + '] (TradeDay)
+            WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [' + @table + '_4] ON [' + @db + '].[dbo].[' + @table + '] (Ticker)
+            WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [' + @table + '_5] ON [' + @db + '].[dbo].[' + @table + '] (UpdateTime)
+            WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
+        CREATE NONCLUSTERED INDEX [' + @table + '_6] ON [' + @db + '].[dbo].[' + @table + '] (TradeDay, Ticker)
+            WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
+        CREATE UNIQUE NONCLUSTERED INDEX [' + @table + '_7] ON [' + @db + '].[dbo].[' + @table + '] (DateTime, Ticker)
+            WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=ON, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
+        CREATE UNIQUE NONCLUSTERED INDEX [' + @table + '_8] ON [' + @db + '].[dbo].[' + @table + '] (TradeDay, DateTime, Ticker)
+            WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=ON, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
+
+    END;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM ' + QUOTENAME(@db) + '.sys.objects
+        WHERE name = N''' + CAST(@status_table AS NVARCHAR(MAX)) + ''' AND type = ''U''
     )
     BEGIN
         CREATE TABLE [' + @db + '].[dbo].[' + @status_table + '] (
@@ -88,6 +136,9 @@ BEGIN
             WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
         CREATE UNIQUE NONCLUSTERED INDEX [' + @status_table + '_10] ON [' + @db + '].[dbo].[' + @status_table + '] (TradeDay, Product)
             WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=ON, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
-    END';
-    EXEC sp_executesql @sql2;
+    END
+    ';
 END
+
+-- 执行拼接后的 SQL
+EXEC sp_executesql @sql;

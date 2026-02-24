@@ -184,8 +184,8 @@ class EdbInfo(BaseModel):
     ticker: str
     frequency: str
     timetag: str
-    publishlag: int
-    applicable_pct: bool
+    lag: int
+    is_ratio: bool
     quote_unit: str = ""
     note: str = ""
     table: str = ""

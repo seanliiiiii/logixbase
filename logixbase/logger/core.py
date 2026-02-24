@@ -13,10 +13,10 @@ from .writer import LogWriter
 from .mpwriter import MPLogWriter
 from .utils import get_current_time
 
-from ..protocol import OperationProtocol as OPP, IdentityProtocol as IDP
+from ..protocol import OperationProtocol as OpP, IdentityProtocol as IdP
 
 
-class LogManager(OPP, IDP):
+class LogManager(OpP, IdP):
     __instance = None
     __started = False
 
@@ -87,8 +87,8 @@ class LogManager(OPP, IDP):
     def stop(self):
         if self.__started:
             print("日志队列剩余长度：", self.log_writer.log_queue.qsize())
-            self.log_writer.stop_event.set()
             self.log("INFO", "关闭日志管理器")
+            self.log_writer.stop_event.set()
             self.log_writer.join()
             self.__started = False
             self.reset_logger()
