@@ -112,6 +112,10 @@ def ticker_to_instrument(ticker: str):
                 raise ValueError(f"期货交易所合约格式未定义")
             calendar = parts[2][-formater[1]:]
             product = eval(f"parts[1].{formater[0]}()")
+            # 处理均价合约：品种代码中包含‘_’
+            if "_" in product:
+                product, avg_tag = product.split("_")
+                calendar += avg_tag.upper()
             return product + calendar
         # Spread合约格式：exchange.product.calendar1&calendar2(跨期）exchange.product1&product2.calendar1&calendar2
         elif "&" in parts[2] and int(len(parts[2].split("&")[1])) == 4:
@@ -191,6 +195,10 @@ def instrument_to_ticker(asset: str, exchange: str, instrument: str, deliver_yea
         if formater[1] != 4 and not deliver_year:
             deliver_year = str(datetime.now().year)
         calendar = deliver_year[2:(6 - int(len(calendar)))] + calendar
+        # 处理均价合约日历信息
+        if "_" in product:
+            calendar += product.split("_")[-1].upper()
+
     elif asset == "option":
         return f"{exchange}.{instrument}"
     elif asset in ("stock", "etf"):
@@ -234,11 +242,12 @@ def instrument_to_product(asset: str, instrument: str):
     asset = asset.lower()
 
     if asset == "future":
-        match = re.findall(r"[a-zA-Z]", instrument)
-        if match:
-            return ''.join(match)
+        match = re.findall(r"\d+", instrument)
+        if int(len(match)) == 1:
+            calendar = match[0]
+            return "_".join(instrument.split(calendar))
         else:
-            return instrument
+            raise ValueError(f"期货交易所合约代码有误：{instrument}")
     elif asset == "spread":
         # 价差合约
         tag, symbol = instrument.split(" ", 1)
