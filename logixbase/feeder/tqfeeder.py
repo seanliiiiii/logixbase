@@ -142,7 +142,7 @@ class TqsdkFeeder(BaseFeeder):
                     self.last_tick[instrument_] = q
                 except Exception as e:
                     tb = traceback.format_exc()
-                    self.INFO(f"[TQSDK] 最新Tick数据读取获取失败: {e}  /n {tb}")
+                    self.INFO(f"[TQSDK] 最新Tick数据读取获取失败: {e}  \n {tb}")
 
     @silence_asyncio_warning
     def asset_info(self, asset: str, info: str = "basic", ticker: list = None):

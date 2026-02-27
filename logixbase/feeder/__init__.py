@@ -2,6 +2,8 @@ from .tsfeeder import TinysoftFeeder
 from .schema import TinysoftConfig, TQSDKConfig
 from .tqfeeder import TqsdkFeeder
 from .sqlfeeder import SqlServerFeeder, DatabaseConfig as SqlServerConfig
+from .wfeeder import WindApiFeeder
+
 
 __all__ = [
     # 天软模块
@@ -10,5 +12,6 @@ __all__ = [
     'TqsdkFeeder',
     'SqlServerFeeder',
     "TQSDKConfig",
-    "SqlServerConfig"
+    "SqlServerConfig",
+    "WindApiFeeder"
 ]

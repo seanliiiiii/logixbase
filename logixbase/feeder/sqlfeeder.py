@@ -49,7 +49,7 @@ class SqlServerFeeder(BaseFeeder):
     def create_table(self, asset: str, file: Union[list, tuple], context: dict = None):
         """创建数据库表格"""
         for file_ in file:
-            file_dir = Path(__file__).parent.joinpath("sql", asset.lower(), f"{file_.lower().rstrip('.sql')}.sql")
+            file_dir = Path(__file__).parent.joinpath("sql", asset.lower(), f"{file_.lower().removesuffix('.sql')}.sql")
             self._api.execute_sqlfile(file_dir, context)
 
     def _check_db_exist(self, db: str, table: str = None, schema: str = "dbo"):
@@ -506,7 +506,7 @@ class SqlServerFeeder(BaseFeeder):
         end_ = unify_time(end, fmt="str", mode=3, dot="")
         # 解析品种列表
         product = [k for k in parse_ticker("future", ticker)[0] if "_" in k]
-        raw_product = [k.rstrip("_HOT") for k in set(product) if k.endswith("HOT")]
+        raw_product = [k.removesuffix("_HOT") for k in set(product) if k.endswith("HOT")]
         calendar_product = [k for k in set(product) if not k.endswith("HOT")]
 
         query_raw = f"""
@@ -613,7 +613,7 @@ class SqlServerFeeder(BaseFeeder):
 
         # 取主力合约数据
         if hots:
-            raw_hots = [k.rstrip("_HOT") for k in hots if k.endswith("_HOT")]
+            raw_hots = [k.removesuffix("_HOT") for k in hots if k.endswith("_HOT")]
             calen_hots = [k for k in hots if not k.endswith("_HOT")]
             query = f"""
                     SELECT [DateTime], b.[TradeDay], b.[Ticker], b.[Product] + %s AS [Product], [Open], [High], [Low],
@@ -766,7 +766,7 @@ class SqlServerFeeder(BaseFeeder):
 
     def _future_bar_generator(self, start: str, end: str, interval: str, ticker_lst: list, raws: list, hots: list):
         """期货灵活K线生成"""
-        raw_hot = [k.rstrip("_HOT") for k in hots if k.endswith("_HOT")]
+        raw_hot = [k.removesuffix("_HOT") for k in hots if k.endswith("_HOT")]
         calen_hot = [k for k in hots if not k.endswith("_HOT")]
 
         query = f"""

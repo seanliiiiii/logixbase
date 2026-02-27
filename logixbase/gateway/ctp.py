@@ -1249,7 +1249,7 @@ class CtpMdApi(BaseSpiTemplate,
             self.on_rtn_depth_marketdata(md)
         except Exception as e:
             tb = traceback.format_exc()
-            self.ERROR(f"Ctp Tick行情回调执行失败: {e} /n{tb}")
+            self.ERROR(f"Ctp Tick行情回调执行失败: {e} \n{tb}")
 
     def on_rtn_depth_marketdata(self, md: mdapi.CThostFtdcDepthMarketDataField):
         """Tick回调后执行函数"""

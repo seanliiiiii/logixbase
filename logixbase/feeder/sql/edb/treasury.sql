@@ -1,7 +1,7 @@
 DECLARE @db NVARCHAR(100) = 'ECON_RESEARCH';
-DECLARE @ctd_table NVARCHAR(100) = 'Treasury_CtdInfo1';
-DECLARE @val_table NVARCHAR(100) = 'Treasury_Valuation1';
-DECLARE @tf_table NVARCHAR(100) = 'Treasury_TFactor1';
+DECLARE @ctd_table NVARCHAR(100) = 'Treasury_CtdInfo';
+DECLARE @val_table NVARCHAR(100) = 'Treasury_Valuation';
+DECLARE @tf_table NVARCHAR(100) = 'Treasury_TFactor';
 
 DECLARE @sql NVARCHAR(MAX);
 

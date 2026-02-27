@@ -2,6 +2,10 @@
 
 本文档记录了 LogixBase 项目的所有重大变更。日志格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.8.0] - 2026-02-27
+### 修改
+- 修复部分bug
+
 ## [0.7.3] - 2026-02-25
 ### 修改
 - 优化期货合约代码转换逻辑，新增适应均价合约

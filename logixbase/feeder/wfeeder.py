@@ -517,7 +517,7 @@ class WindOracleFeeder(BaseFeeder):
         return data
 
 
-class DataSeedWindAPI(BaseFeeder):
+class WindApiFeeder(BaseFeeder):
     """
     Fetch data from wind via api.
     """
@@ -714,8 +714,3 @@ class DataSeedWindAPI(BaseFeeder):
                 self.ERROR(f"国债现券转换因子数据获取失败")
 
         return data
-
-
-
-
-

@@ -245,7 +245,7 @@ def instrument_to_product(asset: str, instrument: str):
         match = re.findall(r"\d+", instrument)
         if int(len(match)) == 1:
             calendar = match[0]
-            return "_".join(instrument.split(calendar))
+            return "_".join([k for k in instrument.split(calendar) if k])
         else:
             raise ValueError(f"期货交易所合约代码有误：{instrument}")
     elif asset == "spread":
