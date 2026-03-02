@@ -103,7 +103,7 @@ class BaseFeeder(FDP, IDP):
         """获取万得EDB的经济数据"""
         pass
 
-    def treasury_ctd(self, ticker: str, start: Union[datetime, str, int], end: Union[datetime, str, int]):
+    def treasury_ctd(self, start: Union[datetime, str, int], end: Union[datetime, str, int], ticker: Union[list, tuple, dict]):
         """获取国债期货最廉交割券数据"""
         pass
 

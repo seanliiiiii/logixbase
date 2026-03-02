@@ -3,6 +3,7 @@ from datetime import (datetime, timedelta)
 import json
 from typing import Union
 import pandas as pd
+import numpy as np
 from pathlib import Path
 from typing import Literal
 import warnings
@@ -277,8 +278,13 @@ class TinysoftFeeder(BaseFeeder):
                     basic_info.loc[mask, tag] = dt_
 
             adj_cols = ["ListDate", "DelistDate", "DeliverDate"]
+            # 调整无效数据
+            mask = basic_info["DeliverDate"] == 0
+            basic_info.loc[mask, "DeliverDate"] = basic_info.loc[mask, "DelistDate"]
+            for col in adj_cols:
+                mask_ = basic_info[col].map(lambda x: len(str(int(x)))) == 8
+                basic_info = basic_info.loc[mask_]
             basic_info.loc[:, adj_cols] = basic_info[adj_cols].applymap(lambda x: unify_time(x, fmt="str", mode=3))
-
             # Unit adjust to real float
             basic_info.loc[:, ["MinMargin", "PriceLimit"]] = basic_info.loc[:, ["MinMargin", "PriceLimit"]] / 100
 
@@ -867,20 +873,42 @@ class TinysoftFeeder(BaseFeeder):
         self.INFO(f"{underlying.upper()}期权{unify_time(day, 'str', 3)}底层资产列表获取完成: {int(len(result))}条记录")
         return result
 
-    def treasury_ctd(self, ticker: str, day: Union[datetime, str, int], end: Union[datetime, str, int] = None):
+    def treasury_ctd(self, ticker: Union[list, tuple, dict], start: Union[datetime, str, int], end: Union[datetime, str, int] = None):
         """获取国债期货最廉交割券数据"""
         self.check_connect()
-        if end is not None:
-            self.INFO("天软国债期货最廉交割券数据仅支持单日查询，end参数无效")
-        dt = unify_time(day, fmt="str", mode=3, dot="")
-        ctd_df = pd.DataFrame(columns=["TtlPrice", "TFactor", "CTD_IRR", "Ticker", "TradePrice", "BondCode",
-                                       "FsSpread", "CTD_MD", "Code", "Basis", "CTD_BNOC", "IRR", "NetBasis",
-                                       "BookInterest", "AdjDuration"])
+        # 解析为天软识别的ticker
+        product, tickers = parse_ticker("future", ticker)
+        product = [k.split("_")[0] for k in product]
+        # 统一时间戳
+        ts_start = unify_time(start, 'str', 3, dot='')
+        ts_end = unify_time(end, 'str', 3, dot='')
+
+        ctd_df = pd.DataFrame(columns=["TradeDay","Ticker","BondCode","BookInterest","TFactor","TtlPrice","AdjDuration",
+                                       "Basis","TradePrice","FS_Spread","IRR","NetBasis","CTD_IRR","CTD_BNOC","CTD_MD"])
         # Query data from Tinysoft
         query = f"""
-                 SETSYSPARAM(PN_STOCK(), "{ticker}");
-                 ENDT:={dt}T;
-                 RETURN BondFutureBasicindicators2(ENDT,-1,1,2);
+                  begt:={ts_start}T; 
+                  endt:={ts_end}T; 
+                  //结果保留2位小数 
+                  setsysparam(PN_Precision(),4);                            
+                  Tarr:=MarketTradeDayQk(begt,endt); 
+                  ret:=array(); 
+                  for i:=0 to length(Tarr)-1 do 
+                  begin 
+                   Endt:=Tarr[i]; 
+                   dEndt:=datetoint(Endt); 
+                   //指定合约 stocks:=array('T2109', 'T2112');  
+                   //或取指定日合约，比如指定日还在市交易的国债期货 stocks:=GetFuturesID('T;TF;TS',Endt);     
+                   stocks:={f"GetFuturesID('{';'.join(product)}',Endt)" if product else f"array({str(tickers)[1:-1]})"};
+                   for j:=0 to length(stocks)-1 do 
+                   begin 
+                     setsysparam(pn_stock(),stocks[j]); 
+                     t:= BondFutureBasicindicators2(Endt,-1,1,2); 
+                     if istable(t) then 
+                       ret&=select *,datetostr(Endt) as '截止日' from t end;
+                   end 
+                  end 
+                  return ret;                 
                 """
         data = self.exec_query(query, "查询国债基差")
 
@@ -888,8 +916,9 @@ class TinysoftFeeder(BaseFeeder):
             ctd_ = pd.DataFrame(data)
             ctd_.columns = [self._column_map.get(i.decode("gbk"), i.decode("gbk")) for i in ctd_.columns]
             ctd_ = self._decode_data(ctd_)
-            ctd_ = ctd_.loc[ctd_["TtlPrice"] != 0]
-            ctd_df = pd.concat([ctd_df, ctd_])
+            ctd_ = ctd_.loc[ctd_["TtlPrice"] != 0 & np.isfinite(ctd_["IRR"])]
+            ctd_[["CTD_IRR", "CTD_BNOC", "CTD_MD"]] = ctd_[["CTD_IRR", "CTD_BNOC", "CTD_MD"]].fillna(0).astype(int)
+            ctd_df = pd.concat([ctd_df, ctd_]).loc[:, ctd_df.columns]
 
         return ctd_df
 

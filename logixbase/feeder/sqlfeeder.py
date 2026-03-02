@@ -1924,29 +1924,22 @@ class SqlServerFeeder(BaseFeeder):
         data = self._api.exec_query("UNION ALL".join(query_all))
         return data.set_index("id").T.to_dict()
 
-    def treasury_ctd(self, start: Union[datetime, str, int], end: Union[datetime, str, int] = None,
+    def treasury_ctd(self, start: Union[datetime, str, int], end: Union[datetime, str, int],
                      ticker: Union[list, tuple, dict] = None):
         if ticker and not isinstance(ticker, (list, tuple, dict)):
             self.ERROR("经济指标输入类型错误")
             return
+        # 解析输入参数
         start = unify_time(start, mode=3)
-        end = unify_time(end, mode=3) if end else end
+        end = unify_time(end, mode=3)
+        ticker_lst = parse_ticker("future", ticker)[1]
+
         query = f"""
-                SELECT a.[Date], a.[Ticker], a.[CTD] AS [Treasury], b.[TFactor],
-                       c.[Yield_CFETS], c.[Clean_CFETS], c.[Dirty_CFETS], c.[Yield_SHC], c.[Clean_SHC], 
-                       c.[Dirty_SHC], c.[ModifiedDuration_SHC], c.[AccruedInterest_SHC], c.[ValueOnBP_SHC],
-                       c.[Convexity_SHC]
-                FROM (SELECT [Date], [Ticker], [CTD] 
-                      FROM [ECON_RESEARCH].[dbo].[Treasury_CtdInfo]
-                      WHERE [Date] >= '{start}' 
-                      {f'AND [Ticker] IN ({str(ticker)[1:-1]})' if ticker else ''}
-                      {f"AND [Date] <= '{end}'" if end else ''}
-                      )a 
-                LEFT JOIN (SELECT [Ticker], [Treasury], [TFactor]
-                           FROM [ECON_RESEARCH].[dbo].[Treasury_TFactor]) b
-                ON a.[Ticker] = b.[Ticker] AND a.[CTD] = b.[Treasury]
-                LEFT JOIN [ECON_RESEARCH].[dbo].[Treasury_Valuation] c 
-                ON a.[CTD] = c.[Ticker] AND a.[Date] = c.[Date]
+                SELECT [TradeDay], [Ticker], [BondCode], [BookInterest], [TFactor], [TtlPrice], [AdjDuration], [Basis],
+                        [TradePrice], [FS_Spread], [IRR], [NetBasis], [CTD_IRR], [CTD_BNOC], [CTD_MD]
+                FROM [ECON_RESEARCH].[dbo].[Treasury_CtdData]
+                WHERE [TradeDay] >= '{start}' AND [TradeDay] <= '{end}'
+                {f'AND [Ticker] IN ({str(ticker_lst)[1:-1]})' if ticker_lst else ''}
                 """
 
         data = self._api.exec_query(query)

@@ -31,7 +31,7 @@ column:
   期货类别(末值): ClassLevel1
   商品期货类别(末值): ClassLevel2
   上市地(末值): Exchange
-  截止日: ExecDate
+  截止日: TradeDay
   投机买保证金率(%): LongMargin
   投机卖保证金率(%): ShortMargin
   套保买保证金率(%): LongMargin_Arbitrage
