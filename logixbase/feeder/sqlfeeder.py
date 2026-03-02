@@ -1890,12 +1890,12 @@ class SqlServerFeeder(BaseFeeder):
         # 调整数据发布滞后
         data = data.set_index(["Date", "ID"])["Data"].unstack()
 
-        pub_lags = [i.publishlag for i in info.values()]
+        pub_lags = [i.lag for i in info.values()]
         start_ = start - timedelta(min(0, min(pub_lags)))
         end_ = end + timedelta(max(0, max(pub_lags))) if end else data.index.max() + timedelta(max(0, max(pub_lags)))
         data = pd.DataFrame(index=all_calendar(start_, end_)).join(data)
         for index_id in data.columns:
-            lag = info[index_id].publishlag
+            lag = info[index_id].lag
             data.loc[:, index_id] = data.loc[:, index_id].shift(lag)
         data.index.name = "Date"
         return data.sort_index()
