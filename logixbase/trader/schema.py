@@ -165,28 +165,32 @@ class EtfInfo(BaseModel):
             self.ticker = instrument_to_ticker(self.asset.value, self.exchange.value, self.instrument)
 
 
-class QmFactorInfo(BaseModel):
-    contract: str
-    factor: str
-    factor_id: int
-    index_id: str
+class FutureIndexInfo(BaseModel):
+    product: str
+    index_id: int
+    edb_id: str
     dimension: str
     correlation: int
     description: str
+    active: bool
+    dim1: str
+    dim2: str = ""
+    dim3: str = ""
+    dim4: str = ""
     note: str = ""
 
 
 class EdbInfo(BaseModel):
     index_id: str
-    industry: str
+    class_type: str
     description: str
     source: str
     ticker: str
     frequency: str
-    timetag: str
+    pub_day: str
     lag: int
     is_ratio: bool
-    quote_unit: str = ""
+    unit: str = ""
     note: str = ""
     table: str = ""
 

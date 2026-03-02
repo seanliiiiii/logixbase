@@ -8,6 +8,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 from logixbase.executor import MultiTaskExecutor
 from logixbase.logger import LogManager
 
+
 # 示例函数（测试：参数组合、异常、内存返回）
 def example_task(x, y, delay=0.1, logger=None):
     time.sleep(delay + random.uniform(0, 0.3))
@@ -26,11 +27,10 @@ def generate_param_combinations():
     return param_set
 
 
-def run_executor_demo(mode='process'):
+def run_executor_demo(cfg, mode='process'):
     print(f"\n==== Running {mode.upper()} mode demo ====")
 
-    loger = LogManager.get_instance(use_mp=True if mode in ("process", "pool") else False,
-                                    log_path=r'd:\logs')
+    loger = LogManager.get_instance(cfg)
 
     executor = MultiTaskExecutor(mode=mode)
     executor.bind_share(logger=loger)

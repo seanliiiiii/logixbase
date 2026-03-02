@@ -90,7 +90,7 @@ class SimpleEngine(BaseEngine):
 def main():
     """主函数"""
     # 配置日志
-    logger = LogManager.get_instance(use_mp=False, log_path="./logs")
+    logger = LogManager.get_instance()
     logger.start()
     
     # 创建并运行引擎

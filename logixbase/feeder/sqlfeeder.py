@@ -10,7 +10,7 @@ from .base import BaseFeeder
 from ..utils import (DatabaseConfig, DealWithSql, unify_time, select_date, transform_time_range, all_calendar)
 from ..configer import read_config
 from ..trader import (FutureInfo, StockInfo, IndexInfo, EtfInfo, OptionInfo, BarData, Interval, EdbInfo,
-                      instrument_to_ticker, instrument_to_product, Asset, parse_ticker, parse_exchange)
+                      instrument_to_ticker, instrument_to_product, Asset, parse_ticker, parse_exchange, FutureIndexInfo)
 
 LOCAL_DIR = Path(__file__).parent
 
@@ -1837,6 +1837,7 @@ class SqlServerFeeder(BaseFeeder):
         return data.loc[:, ["TradeDay", "Ticker", "CoefAdj"]]
 
     def edb_info(self, ticker: Union[list, tuple, dict] = None, use_schema: bool = False):
+        """加载EDB信息数据"""
         if ticker and not isinstance(ticker, (list, tuple, dict)):
             self.ERROR("经济指标输入类型错误")
             return
@@ -1846,8 +1847,8 @@ class SqlServerFeeder(BaseFeeder):
         for (label, ticker_lst) in ticker_dict.items():
             table = self._edb[label]
             query = f"""
-                      SELECT '{label}' + CAST([ID] AS VARCHAR) AS [ID], [Industry], [Description], [Source], [Ticker],
-                       [Frequency], [TimeTag], [PublishLag], [QuoteUnit], [Applicable_Pct], [Note],
+                      SELECT '{label}' + CAST([ID] AS VARCHAR) AS [ID], [Class], [Description], [Source], [Ticker],
+                       [Frequency], [PubDay], [Lag], [Unit], [IsRatio], [Note],
                         '{f'{table}'}' AS [Table]
                       FROM [ECON_RESEARCH].[dbo].[EDBInfo_{table}]
                       {f"WHERE [ID] in ({str(ticker_lst)[1:-1]})" if ticker_lst else ''}                      
@@ -1859,7 +1860,8 @@ class SqlServerFeeder(BaseFeeder):
         self.INFO(f"经济数据信息获取完成: {int(len(data))}条记录")
         if use_schema:
             data.columns = data.columns.str.lower()
-            data_dict = data.rename(columns={"id": "index_id"}).to_dict("records")
+            data_dict = data.rename(columns={"id": "index_id", "class": "class_type", "pubday": "pub_day",
+                                             "isratio": "is_ratio"}).to_dict("records")
             data = {k["index_id"]: EdbInfo(**k) for k in data_dict}
         return data
 
@@ -1945,3 +1947,42 @@ class SqlServerFeeder(BaseFeeder):
         data = self._api.exec_query(query)
         return data
 
+    def product_index_info(self, asset: str, ticker: Union[list, tuple, dict] = None, use_schema: bool = False):
+        """加载品种经济指标信息"""
+        if ticker and not isinstance(ticker, (list, tuple, dict)):
+            self.ERROR("资产输入类型错误")
+            return
+        # 解析品种列表
+        if ticker:
+            product, ticker_lst = parse_ticker(asset, ticker)
+            product = [k.split("_")[0] for k in product]
+            if not product:
+                self.ERROR("资产信息无法识别，请传入正确的参数")
+                return
+        else:
+            product = []
+
+        if asset.lower() == "future":
+            query = f"""
+                    SELECT [Product], [Dim1] AS [Dimension],
+                            [Dim1],[Dim2],[Dim3],[Dim4],[ID],[IndexID],[Description],[Correlation],[Active],[Note]
+                    FROM [ECON_RESEARCH].[dbo].[ProdIndex_Future]
+                    {f"WHERE [Product] in ({str(product)[1:-1]})" if ticker else ""}
+                    """
+            schema = FutureIndexInfo
+        else:
+            self.ERROR(f"资产类别未定义：{asset}")
+            return
+        data = self._api.exec_query(query)
+        self.INFO(f"资产指标信息获取完成: {int(len(data))}条记录")
+        if use_schema:
+            # 调整数据格式
+            data.columns = data.columns.str.lower()
+            data = data.rename(columns={"id": "index_id", "indexid": "edb_id"})
+            data["dimension"] = data[["dim1","dim2","dim3","dim4"]].apply(lambda x: "-".join([k for k in x if k]), axis=1)
+            # 生成schema字典
+            data = {p: {d: g2.set_index("index_id").assign(index_id=lambda x: x.index).to_dict(orient="index")
+                          for d, g2 in g.groupby("dimension", sort=False)}
+                      for p, g in data.groupby("product", sort=False)}
+            data = {k: {m: {i: schema(**j) for i, j in n.items()} for m, n in v.items()} for k, v in data.items()}
+        return data

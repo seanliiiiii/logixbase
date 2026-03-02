@@ -97,10 +97,11 @@ class BaseFeeder(FDP, IDP):
         pass
 
     def edb_info(self, tickers: list = None, use_schema: bool = False):
+        """加载EDB信息数据"""
         pass
 
     def edb_data(self, start: Union[datetime, str, int], end: Union[datetime, str, int], tickers: list):
-        """获取万得EDB的经济数据"""
+        """加载EDB的经济数据"""
         pass
 
     def treasury_ctd(self, start: Union[datetime, str, int], end: Union[datetime, str, int], ticker: Union[list, tuple, dict]):
@@ -110,4 +111,8 @@ class BaseFeeder(FDP, IDP):
     def asset_coef_adj(self, asset: str, product: Union[list, tuple], start: Union[datetime, str, int],
                        end: Union[datetime, str, int]):
         """获取资产除权系数"""
+        pass
+
+    def product_index_info(self, asset: str, tickers: list = None, use_schema: bool = False):
+        """加载品种指标信息数据"""
         pass

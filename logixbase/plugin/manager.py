@@ -1,4 +1,4 @@
-from typing import Dict, List, Type, Any, Optional
+from typing import Dict, List, Any, Optional
 from .base import BasePlugin
 
 

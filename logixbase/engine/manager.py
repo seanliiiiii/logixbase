@@ -2,6 +2,7 @@ from typing import Dict, Any, Optional, List, Union
 
 from .base import BaseEngine
 from ..logger.core import LogManager
+from ..logger import LoggerConfig
 
 
 class ProcessManager:
@@ -9,12 +10,12 @@ class ProcessManager:
     进程管理器，用于管理多个引擎实例
     提供统一的控制接口
     """
-    def __init__(self):
+    def __init__(self, cfg: LoggerConfig):
         """
         初始化进程管理器
         """
         self.engines: Dict[str, BaseEngine] = {}
-        self.logger = LogManager.get_instance()
+        self.logger = LogManager.get_instance(cfg)
         
     def register(self, name: str, engine: BaseEngine) -> BaseEngine:
         """

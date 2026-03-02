@@ -1,11 +1,12 @@
 import time
 import traceback
 from .core import LogManager
+from .schema import LoggerConfig
 
 
 def auto_log(func):
     def wrapper(*args, **kwargs):
-        lm = LogManager.get_instance()
+        lm = LogManager.get_instance(LoggerConfig(**kwargs["config"]))
         log_id = f"{func.__module__}.{func.__name__}"
         start_time = time.time()
         lm.log("INFO", f"函数 {func.__name__} 开始执行。", log_id=log_id)

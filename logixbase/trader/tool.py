@@ -5,7 +5,7 @@ import numpy as np
 from numba import njit
 
 from ..utils import has_own_method
-from .schema import QmFactorInfo, EdbInfo, Interval, BarData, TickData, Exchange
+from .schema import FutureIndexInfo, EdbInfo, Interval, BarData, TickData, Exchange
 from .utils import round_to
 
 
@@ -68,9 +68,9 @@ class StrategyTemplate:
         """品种交易合约"""
         return self.engine.info["trade_ticker"][product]
 
-    def qm_factor_info(self, product: str, factor: str) -> QmFactorInfo:
+    def future_index_info(self, product: str, factor: str) -> FutureIndexInfo:
         """品种基本面因子信息"""
-        return self.engine.info["qm_factor_info"][product][factor]
+        return self.engine.info["future_index_info"][product][factor]
 
     def index_info(self, index_id: str) -> EdbInfo:
         """基本面指标信息"""
