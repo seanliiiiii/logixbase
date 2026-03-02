@@ -297,7 +297,7 @@ class TinysoftFeeder(BaseFeeder):
     def future_info_trade(self):
         """Get trade clearing parameters of all domestic futures contracts"""
         self.check_connect()
-        cols = ["Ticker", "ExecDate", "LongMargin", "ShortMargin", "OpenCommission_Pct", "OpenCommission_Fix",
+        cols = ["Ticker", "TradeDay", "LongMargin", "ShortMargin", "OpenCommission_Pct", "OpenCommission_Fix",
                 "CloseCommission_Pct", "CloseCommission_Fix", "IntradayOpenCommission_Pct",
                 "IntradayOpenCommission_Fix", "IntradayCloseCommission_Pct", "IntradayCloseCommission_Fix"]
 
@@ -317,9 +317,9 @@ class TinysoftFeeder(BaseFeeder):
             # Decode data
             trade_info = self._decode_data(trade_info)
             # Filter invalid data
-            trade_info = trade_info[(trade_info["ExecDate"] != 0)]
+            trade_info = trade_info[(trade_info["TradeDay"] != 0)]
             # Adjust format of data
-            trade_info["ExecDate"] = trade_info["ExecDate"].map(lambda x: unify_time(x, fmt="str", mode=3))
+            trade_info["TradeDay"] = trade_info["TradeDay"].map(lambda x: unify_time(x, fmt="str", mode=3))
             trade_info.loc[:, ["LongMargin", "ShortMargin"]] = trade_info.loc[:, ["LongMargin", "ShortMargin"]] / 100
             pct_cols = [x for x in trade_info.columns if "Pct" in x]
             trade_info.loc[:, pct_cols] = (trade_info.loc[:, pct_cols] / 10000).applymap(lambda x: round(x, 6))
