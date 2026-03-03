@@ -41,7 +41,9 @@ BEGIN
             WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
         CREATE NONCLUSTERED INDEX [' + @ctd_table + '_3] ON [' + @db + '].[dbo].[' + @ctd_table + '] (UpdateTime)
             WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
-        CREATE UNIQUE NONCLUSTERED INDEX [' + @ctd_table + '_4] ON [' + @db + '].[dbo].[' + @ctd_table + '] (TradeDay, Ticker)
+        CREATE NONCLUSTERED INDEX [' + @ctd_table + '_4] ON [' + @db + '].[dbo].[' + @ctd_table + '] (TradeDay, Ticker)
+            WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=OFF, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
+        CREATE UNIQUE NONCLUSTERED INDEX [' + @ctd_table + '_5] ON [' + @db + '].[dbo].[' + @ctd_table + '] (TradeDay, Ticker, BondCode)
             WITH (STATISTICS_NORECOMPUTE=OFF, IGNORE_DUP_KEY=ON, ALLOW_ROW_LOCKS=ON, ALLOW_PAGE_LOCKS=ON) ON [PRIMARY];
     END;
     ';
