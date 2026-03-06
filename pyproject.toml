@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "logixbase"
-version = "0.9.4"
+version = "0.9.5"
 description = "LogixQuant基础功能包项目"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -35,7 +35,6 @@ dependencies = [
     "pyyaml>=6.0.2",
     "pytz>=2024.2",
     "requests>=2.32.3",
-    "sqlalchemy>=2.0.41",
     "matplotlib>=3.8.4",
     "numba>=0.60.0",
     "statsmodels>=0.14.1",
