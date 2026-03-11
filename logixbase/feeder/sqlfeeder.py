@@ -349,7 +349,7 @@ class SqlServerFeeder(BaseFeeder):
     def etf_info_basic(self, ticker: list = None):
         query = """
                 SELECT [Ticker], [Name], [EstablishDate],[ListDate],[Exchange],[Style],[Target],
-                        [TotalIssuedShares],[BenchMark],[TradeSymbol]  
+                        [TotalIssuedShares],[BenchMark],[PrimInstrument]  
                 FROM [ETF_RESEARCH_DAILY].[dbo].[ETFInfo_Basic]
                 """
         if ticker:
