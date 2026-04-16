@@ -442,7 +442,8 @@ class StopOrder(BaseModel):
     price: float = 0
     volume: float = 0
     lock: bool = False
-    fill_order_id: list = field(default_factory=list)
+    # fill_order_id: list = field(default_factory=list)
+    fill_order_id: list = []
 
     def model_post_init(self, _context = None):
         """"""

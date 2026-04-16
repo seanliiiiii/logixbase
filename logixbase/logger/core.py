@@ -31,6 +31,11 @@ class LogManager(OpP, IdP):
             LogManager.__instance = LogManager(config)
         return LogManager.__instance
 
+    @staticmethod
+    def bind_instance(logger):
+        """绑定已有单例实例至当前单例"""
+        LogManager.__instance = logger
+
     def __init__(self, config: Union[LoggerConfig, dict]):
         if LogManager.__instance is not None:
             raise Exception("LogManager 为单例，请使用 get_instance() 获取实例。")
